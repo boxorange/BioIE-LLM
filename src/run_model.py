@@ -4,22 +4,38 @@ import string
 import argparse
 from datetime import timedelta, datetime
 
-from dataset_processor import *
-from evaluator import *
-
-import galai as gal
-
-# change HF cache directory to scratch directory. 
+# Change the HF cache directory to a scratch directory. 
 # Make sure to set the variable before importing transformers module (including indirect import through galai).
 # ref: https://github.com/paperswithcode/galai/blob/main/notebooks/Introduction%20to%20Galactica%20Models.ipynb
-os.environ['TRANSFORMERS_CACHE'] = "/scratch/ac.gpark/.cache/galactica"
+os.environ["TRANSFORMERS_CACHE"] = "/scratch/ac.gpark/.cache/huggingface"
 
 # ref: https://huggingface.co/docs/transformers/v4.21.1/en/troubleshooting#troubleshoot
 #os.environ["CUDA_VISIBLE_DEVICES"] = "" # to run on CPU
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1" # to get a better traceback from the GPU error
 
 from transformers import LlamaForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer
-    
+
+# Must import galai after transformers. 05/19/2023
+# If not, TRANSFORMERS_CACHE directory is set to 'galactica', which overrides the env variable setting above.
+import galai as gal
+
+from data_processors import *
+from evaluators import *
+
+
+def get_data_processor(data_name, *argv):
+    if data_name == "scierc":
+        return SciercProcessor(data_name, *argv)
+    elif data_name == "string":
+        # pass 'task' argument for entity_relation task. 04/12/2023
+        return StringProcessor(data_name, *argv)
+    elif data_name == "kegg":
+        return KeggProcessor(data_name, *argv)
+    elif data_name == "indra":
+        return IndraProcessor(data_name, *argv)
+    else:
+        raise ValueError("Invalid data name: " + data_name)
+
 
 if __name__ == "__main__":
     """
@@ -88,7 +104,7 @@ if __name__ == "__main__":
     n_shots = args.n_shots
     parallelizm = args.parallelizm
     
-    # load model.
+    # load a model.
     if model_name == 'Galactica':
         # when parallelize is set, dtype is set to float16. The default dtype is float32.
         model = gal.load_model(model_type, parallelize=parallelizm)
@@ -106,28 +122,30 @@ if __name__ == "__main__":
         tokenizer.model_max_length = 2020
         
     elif model_name == 'LLaMA':
-        model = LlamaForCausalLM.from_pretrained(model_type)
+        model = LlamaForCausalLM.from_pretrained(model_type, device_map="auto")
         tokenizer = AutoTokenizer.from_pretrained(model_type)
-        tokenizer.pad_token = tokenizer.eos_token 
+        tokenizer.pad_token = tokenizer.eos_token
     
     elif model_name == 'RST':
         # RST model (https://huggingface.co/XLab) - the model is very heavy. 01/20/2023
-        tokenizer = AutoTokenizer.from_pretrained("XLab/rst-all-11b")
-        model = AutoModelForSeq2SeqLM.from_pretrained("XLab/rst-all-11b")
-
+        model = AutoModelForSeq2SeqLM.from_pretrained(model_type, device_map="auto")
+        tokenizer = AutoTokenizer.from_pretrained(model_type)
+        
+        '''
         inputs = tokenizer.encode("TEXT: this is the best cast iron skillet you will ever buy. QUERY: Is this review \"positive\" or \"negative\"", return_tensors="pt")
         outputs = model.generate(inputs)
         print(outputs)
         print(tokenizer.decode(outputs[0], skip_special_tokens=True, clean_up_tokenization_spaces=True))
         input('enter..')
+        '''
 
-
-    data_processor = DatasetProcessor(data_name, data_repo_path, tokenizer, task)
-    data_processor.create_prompt(task, n_shots)
-
+    
+    # run a task.
     st = time.time()
     
-    results = data_processor.infer(model, task, batch_size)
+    data_processor = get_data_processor(data_name, data_repo_path, task, model_name, tokenizer)
+    data_processor.create_prompt(n_shots)	
+    results = data_processor.infer(model, batch_size)
     
     et = time.time()
     elapsed_time = et - st

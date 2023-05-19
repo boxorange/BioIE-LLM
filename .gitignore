@@ -9,7 +9,7 @@ __pycache__/
 models/
 error_list/
 result/
-datasets/
+data/
 src/test/
 src/backup/
 
