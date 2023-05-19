@@ -6,6 +6,13 @@ __pycache__/
 # C extensions
 *.so
 
+models/
+error_list/
+result/
+datasets/
+src/test/
+src/backup/
+
 # Distribution / packaging
 .Python
 build/

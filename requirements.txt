@@ -1,0 +1,12 @@
+torch>=1.12
+transformers
+tokenizers
+parallelformers==1.2.7
+accelerate
+markdown>=3.4
+bleach[css]~=5.0.1
+psutil
+matplotlib
+scikit-learn
+sentencepiece
+protobuf==3.20.3
