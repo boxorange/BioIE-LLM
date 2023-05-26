@@ -1,8 +1,3 @@
-"""
-
-- KEGG reader
-
-"""
 import os
 import json
 import re
@@ -10,32 +5,39 @@ import re
 
 class KeggReader:
     
-    def __init__(self, path, task=None):
+    def __init__(self, path, task, kegg_data_type, relation_query_answers):
         path = os.path.expanduser(path)
 
         if task == 'entity_relation':
-            #entity_task_result_file = '~/radbio/Entity_Relation_Extraction/result/kegg/entity/Question: Which genes are involved in {x} entity_result_2023-04-15 07:19:04.416465.txt'
-            entity_task_result_file = '~/radbio/Entity_Relation_Extraction/result/kegg/entity/entity_result_2023-04-15 11:15:45.440396.txt'
+            if kegg_data_type == 'high-dose':
+                entity_task_result_file = '~/radbio/Entity_Relation_Extraction/result/kegg/entity/entity_result_2023-04-15 11:15:45.440396.txt'
+            elif kegg_data_type == 'low-dose':
+                entity_task_result_file = '~/radbio/Entity_Relation_Extraction/result/kegg/entity/entity_result_2023-04-15 11:15:45.440396.txt'
+            
             entity_task_result_file = os.path.expanduser(entity_task_result_file)
 
             pathway_relations = []
             with open(entity_task_result_file) as fin:
-                for line in fin.readlines()[4:]:
+                lines = fin.readlines()
+                delimiter_idx = lines.index("********************************************************************\n")
+                for line in lines[delimiter_idx+1:]:
                     line = line.replace(',,', ',')
                     
                     src, pred, true = line.split(',')
                     src = src.strip()
                     pred = pred.strip()
                     true = true.strip()
-                    
-                    #pathway_relations.append([src, true, 'True'])
-                    pathway_relations.append([src, true, 'yes'])
+
+                    pathway_relations.append([src, true, relation_query_answers[0]])
         
             self.test_data = pathway_relations
             
             converted_data_dir = os.path.join(path, "KEGG/converted")
-            self.train_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
             
+            if kegg_data_type == 'high-dose':
+                self.train_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
+            elif kegg_data_type == 'low-dose':
+                self.train_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
         else:
             orig_data_dir = os.path.join(path, "KEGG/original")
             converted_data_dir = os.path.join(path, "KEGG/converted")
@@ -46,12 +48,13 @@ class KeggReader:
             if len(os.listdir(converted_data_dir)) == 0:
                 self._convert_data(orig_data_dir, converted_data_dir)
             
-            # TODO: split data into train/dev/test.
-            #self.train_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
-            #self.test_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
-            
-            self.train_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
-            self.test_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
+            ## TODO: split data into train/dev/test.
+            if kegg_data_type == 'high-dose':
+                self.train_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
+                self.test_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
+            elif kegg_data_type == 'low-dose':
+                self.train_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
+                self.test_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
 
 
     def _convert_data(self, orig_data_dir, converted_data_dir):

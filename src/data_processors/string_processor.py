@@ -1,16 +1,15 @@
-import os
 import sys
 import time
-import re
 import string
 import random
+import re
 import itertools
 
 from datetime import timedelta
 
 # setting path
 sys.path.append('../data_readers')
-from data_readers import *
+from data_readers import StringReader
 
 from .base_processor import BaseProcessor
 
@@ -23,13 +22,14 @@ class StringProcessor(BaseProcessor):
         data_name: str, 
         data_repo_path: str,
         task: str,
+        test_sample_size: int, 
         model_name: str,
         tokenizer,
     ):
-        super().__init__(data_name, task, model_name, tokenizer)
+        super().__init__(data_name, task, test_sample_size, model_name, tokenizer)
 
         # pass task argument for entity_relation task. 04/12/2023
-        self.data_reader = StringReader(data_repo_path, task)
+        self.data_reader = StringReader(data_repo_path, task, self.relation_query_answers)
         
         ## TODO: remove this later. this is to filter out samples with many answers (long list of proteins).
         self.max_entity_list_len = 30 # used for entity task.
@@ -44,29 +44,9 @@ class StringProcessor(BaseProcessor):
     ):
         self.model_prompt = self.get_model_prompt()
         task = self.task
-        
-        if hasattr(self.data_reader, "ent_types"):
-            ent_types_included = {x: 0 for x in self.data_reader.ent_types}
-            
-            assert len(string.ascii_uppercase) >= len(self.data_reader.ent_types)
-            
-            ent_type_multiple_choices_dict = {x: y for x, y in zip(self.data_reader.ent_types, string.ascii_uppercase)}
-            self.ent_type_multiple_choices_str = ["(" + x + ") " + y for x, y in zip(string.ascii_uppercase, self.data_reader.ent_types)]
-            self.ent_type_multiple_choices_str = " ".join(self.ent_type_multiple_choices_str)
-
-        if hasattr(self.data_reader, "rel_types"):
-            rel_types_included = {x: 0 for x in self.data_reader.rel_types}
-            
-            assert len(string.ascii_uppercase) >= len(self.data_reader.rel_types)
-            
-            rel_type_multiple_choices_dict = {x: y for x, y in zip(self.data_reader.rel_types, string.ascii_uppercase)}
-            #self.rel_type_multiple_choices_str = ["(" + x + ") " + y for x, y in zip(string.ascii_uppercase, self.data_reader.rel_types)]
-            #self.rel_type_multiple_choices_str = " ".join(self.rel_type_multiple_choices_str)
-            
-            self.rel_type_multiple_choices_str = ", ".join(['"' + x + '"' for x in self.data_reader.rel_types])
-
-
         data = self.data_reader.train_data
+        
+        self.task_prompt[task] = ""
         
         if n_shots == 0:
             if task == "relation":
@@ -82,9 +62,7 @@ class StringProcessor(BaseProcessor):
                 # to generate the same random samples, convert it to an ordered list. 
                 self.all_pos_prot_pairs = sorted(self.all_pos_prot_pairs) 
                 #self.all_neg_prot_pairs = sorted(self.all_neg_prot_pairs) # all_neg_prot_pairs is already sorted by combinations(). 
-
             return
-
 
         if task == "entity":
             keys = list(data.keys())
@@ -113,8 +91,8 @@ class StringProcessor(BaseProcessor):
             '''
 
             for sample in self.shot_samples:
-                self.entity_prompt += self.model_prompt['entity_q'](sample[0])
-                self.entity_prompt += self.model_prompt['entity_a'](", ".join(list(set(sample[1]))))
+                self.task_prompt[task] += self.model_prompt['entity_q'](sample[0])
+                self.task_prompt[task] += self.model_prompt['entity_a'](", ".join(sorted(list(set(sample[1]))))) # the order of list affects the model inference.
             
         elif task in ["relation", "entity_relation"]:
             # len(self.all_pos_prot_pairs) # 11,937,359 (w/o duplicates: 5,968,680)
@@ -140,80 +118,67 @@ class StringProcessor(BaseProcessor):
             elapsed_time = et - st
             td = timedelta(seconds=elapsed_time)
             print('>> Execution time in hh:mm:ss:', td)
-            
-            
+                
             pos_prot_pairs = random.sample(self.all_pos_prot_pairs, n_shots)
             neg_prot_pairs = random.sample(self.all_neg_prot_pairs, n_shots)
-            
-            
-            
-                
+
             for pos_pair, neg_pair in zip(pos_prot_pairs, neg_prot_pairs):
-                self.relation_prompt += self.model_prompt['relation_q'](neg_pair[0], neg_pair[1])
-                #self.relation_prompt += self.model_prompt['relation_a']("False")
-                self.relation_prompt += self.model_prompt['relation_a']("no")
-                #self.relation_prompt += self.model_prompt['relation_a']("Unrelated")
-                self.relation_prompt += self.model_prompt['relation_q'](pos_pair[0], pos_pair[1])
-                #self.relation_prompt += self.model_prompt['relation_a']("True")
-                self.relation_prompt += self.model_prompt['relation_a']("yes")
-                #self.relation_prompt += self.model_prompt['relation_a']("Related")
-                    
-            
+                self.task_prompt[task] += self.model_prompt['relation_q'](neg_pair[0], neg_pair[1])
+                self.task_prompt[task] += self.model_prompt['relation_a'](self.relation_query_answers[1])
+                self.task_prompt[task] += self.model_prompt['relation_q'](pos_pair[0], pos_pair[1])
+                self.task_prompt[task] += self.model_prompt['relation_a'](self.relation_query_answers[0])
             
             # use this when the numbers of pos and neg are different. 
             '''
             for neg_pair in neg_prot_pairs:
-                self.relation_prompt += self.relation_q(neg_pair[0], neg_pair[1])
-                self.relation_prompt += self.relation_a("False")
-                #self.relation_prompt += self.relation_a("Unrelated")
+                self.task_prompt[task] += self.model_prompt['relation_q'](neg_pair[0], neg_pair[1])
+                self.task_prompt[task] += self.model_prompt['relation_a'](self.relation_query_answers[1])
                 
             for pos_pair in pos_prot_pairs:
-                self.relation_prompt += self.relation_q(pos_pair[0], pos_pair[1])
-                self.relation_prompt += self.relation_a("True")
-                #self.relation_prompt += self.relation_a("Related")
+                self.task_prompt[task] += self.model_prompt['relation_q'](pos_pair[0], pos_pair[1])
+                self.task_prompt[task] += self.model_prompt['relation_a'](self.relation_query_answers[0])
             '''
-            
             
             # test code for various orders of pos and neg samples.
             '''
-            self.relation_prompt += self.relation_q(neg_prot_pairs[0][0], neg_prot_pairs[0][1])
-            self.relation_prompt += self.relation_a("False")
+            self.task_prompt[task] += self.relation_q(neg_prot_pairs[0][0], neg_prot_pairs[0][1])
+            self.task_prompt[task] += self.relation_a("False")
             
-            self.relation_prompt += self.relation_q(pos_prot_pairs[0][0], pos_prot_pairs[0][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[0][0], pos_prot_pairs[0][1])
+            self.task_prompt[task] += self.relation_a("True")
 
-            self.relation_prompt += self.relation_q(pos_prot_pairs[1][0], pos_prot_pairs[1][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[1][0], pos_prot_pairs[1][1])
+            self.task_prompt[task] += self.relation_a("True")
             
-            self.relation_prompt += self.relation_q(pos_prot_pairs[2][0], pos_prot_pairs[2][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[2][0], pos_prot_pairs[2][1])
+            self.task_prompt[task] += self.relation_a("True")
             
-            self.relation_prompt += self.relation_q(neg_prot_pairs[1][0], neg_prot_pairs[1][1])
-            self.relation_prompt += self.relation_a("False")
+            self.task_prompt[task] += self.relation_q(neg_prot_pairs[1][0], neg_prot_pairs[1][1])
+            self.task_prompt[task] += self.relation_a("False")
             
-            self.relation_prompt += self.relation_q(pos_prot_pairs[3][0], pos_prot_pairs[3][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[3][0], pos_prot_pairs[3][1])
+            self.task_prompt[task] += self.relation_a("True")
                 
-            self.relation_prompt += self.relation_q(pos_prot_pairs[4][0], pos_prot_pairs[4][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[4][0], pos_prot_pairs[4][1])
+            self.task_prompt[task] += self.relation_a("True")
 
-            self.relation_prompt += self.relation_q(pos_prot_pairs[5][0], pos_prot_pairs[5][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[5][0], pos_prot_pairs[5][1])
+            self.task_prompt[task] += self.relation_a("True")
             
-            self.relation_prompt += self.relation_q(neg_prot_pairs[2][0], neg_prot_pairs[2][1])
-            self.relation_prompt += self.relation_a("False")
+            self.task_prompt[task] += self.relation_q(neg_prot_pairs[2][0], neg_prot_pairs[2][1])
+            self.task_prompt[task] += self.relation_a("False")
             
-            self.relation_prompt += self.relation_q(pos_prot_pairs[6][0], pos_prot_pairs[6][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[6][0], pos_prot_pairs[6][1])
+            self.task_prompt[task] += self.relation_a("True")
                 
-            self.relation_prompt += self.relation_q(pos_prot_pairs[7][0], pos_prot_pairs[7][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[7][0], pos_prot_pairs[7][1])
+            self.task_prompt[task] += self.relation_a("True")
 
-            self.relation_prompt += self.relation_q(pos_prot_pairs[8][0], pos_prot_pairs[8][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[8][0], pos_prot_pairs[8][1])
+            self.task_prompt[task] += self.relation_a("True")
             
-            self.relation_prompt += self.relation_q(pos_prot_pairs[9][0], pos_prot_pairs[9][1])
-            self.relation_prompt += self.relation_a("True")
+            self.task_prompt[task] += self.relation_q(pos_prot_pairs[9][0], pos_prot_pairs[9][1])
+            self.task_prompt[task] += self.relation_a("True")
             '''
             
 
@@ -240,33 +205,18 @@ class StringProcessor(BaseProcessor):
             print('>> Execution time in hh:mm:ss:', td)
     
         # debug
-        if len(self.entity_prompt) != 0:
-            print(self.entity_prompt)
-        
-        if len(self.relation_prompt) != 0:
-            print(self.relation_prompt)
-        
-        if len(self.entity_type_prompt) != 0:
-            print(self.entity_type_prompt)
-        
-        if len(self.relation_type_prompt) != 0:
-            print(self.relation_type_prompt)
-        
+        if len(self.task_prompt[task]) != 0:
+            print(self.task_prompt[task])
+
     
     def infer(
         self,
         model, 
         batch_size: int = 1,
     ):
-        """
-        Generate model inference with a batch sized input texts.
-        
-        """
         test_data = self.data_reader.test_data
         task = self.task
-        
-        results = {'entity': [], 'relation': [], 'entity_type': [], 'relation_type': [], 'entity_relation': []}
-        
+        results = self.results
         
         ## TODO: make it cleaner later.
         if task == "entity":
@@ -274,7 +224,7 @@ class StringProcessor(BaseProcessor):
 
         ## TODO: to reduce the number of test samples for a preliminary test. 
         if task == "entity":
-            test_sample_size = 10000
+            test_sample_size = self.test_sample_size # e.g., 1000
             
             # skip samples used in few-shots.
             test_data = {k: v for k, v in test_data.items() if k not in shots_keys}
@@ -287,29 +237,20 @@ class StringProcessor(BaseProcessor):
             test_data = {k: v for k, v in test_data.items() if k in sample_keys}
             
         elif task == "relation":
-            test_sample_size = 50000 # for each positive and negative
+            test_sample_size = self.test_sample_size # e.g., 500 for each positive and negative
             
             pos_prot_pairs = random.sample(self.all_pos_prot_pairs, test_sample_size)
             neg_prot_pairs = random.sample(self.all_neg_prot_pairs, test_sample_size) # draw negative samples.
 
             pos_prot_pairs = [list(x) for x in pos_prot_pairs]
             for i in pos_prot_pairs:
-                #i.append("True")
-                i.append("yes")
+                i.append(self.relation_query_answers[0])
             
             neg_prot_pairs = [list(x) for x in neg_prot_pairs]
             for i in neg_prot_pairs:
-                #i.append("False")
-                i.append("no")
+                i.append(self.relation_query_answers[1])
             
             test_data = pos_prot_pairs + neg_prot_pairs
-    
-        
-        # debug
-        entity_prompt_max_length = 0
-        flag = False
-        error_list = []
-
 
         start = 0
         stop = start + batch_size
@@ -322,96 +263,105 @@ class StringProcessor(BaseProcessor):
             if task == "entity":
                 batch_items = [] # debug
                 batch_input_texts = []
-                true_entities_list = []
+                prompt_list = []
+                true_list = []
+                
                 for item in batch_data:
                     batch_items.append(item)
-                    true_entities_list.append(test_data[item])
                     
-                    entity_prompt_with_test_sample = self.entity_prompt
+                    entity_prompt_with_test_sample = self.task_prompt[task]
                     entity_prompt_with_test_sample += self.model_prompt['entity_q'](item)
-                    
+                                        
+                    prompt_list.append(entity_prompt_with_test_sample)
                     batch_input_texts.append(entity_prompt_with_test_sample)
-                
-                pred_entities_list = self.generate(model, batch_input_texts)
-                
-                
-                print(pred_entities_list)
-                
-
-                for item, pred_entities, true_entities in zip(batch_items, pred_entities_list, true_entities_list):
-                    orig_pred_answer = pred_entities # debug
-                    pred_entities = pred_entities.rsplit("\n\n", 1)[1]
-                    pred_entities = pred_entities.replace("Answer: ", "", 1).replace("A: ", "", 1)
-                    pred_entities = [x.strip() for x in pred_entities.split(", ")]
+                    true_list.append(test_data[item])
                     
-                    ## TODO: check if this is really needed. 02/04/2023
-                    pred_entities = list(set(pred_entities)) # remove duplicates.
+                pred_list = self.get_response(model, batch_input_texts)
+                
+                
+                # debug
+                print(pred_list)
+                
 
-                    pred_entities, true_entities = self.sort_and_pad(pred_entities, true_entities)
+                for item, pred, prompt, true in zip(batch_items, pred_list, prompt_list, true_list):
+                    orig_pred = pred # debug
+                    
+                    pred = self.clean_response(pred, prompt)
+                    
+                    pred, true = self.sort_and_pad(pred, true)
                     
                     ## TODO: for now, check only precision. 03/14/2023
-                    pred_entities = [x for x in pred_entities if x != 'NONE']
-                    true_entities = [x for x in true_entities if x != 'NONE']
-                    if len(pred_entities) > len(true_entities):
-                        pred_entities = pred_entities[:len(true_entities)]
-                    elif len(true_entities) > len(pred_entities):
-                        true_entities = true_entities[:len(pred_entities)]
+                    pred = [x for x in pred if x != 'NONE']
+                    true = [x for x in true if x != 'NONE']
+                    if len(pred) > len(true):
+                        pred = pred[:len(true)]
+                    elif len(true) > len(pred):
+                        true = true[:len(pred)]
                     
                     # store the source item in the query to be used in the relation task. 04/12/2023
-                    src = [item] * len(pred_entities)
+                    src = [item] * len(pred)
                     if len(results[task]) != 0:
                         results[task][0].extend(src)
-                        results[task][1].extend(pred_entities)
-                        results[task][2].extend(true_entities)
+                        results[task][1].extend(pred)
+                        results[task][2].extend(true)
                     else:
-                        results[task] = [src, pred_entities, true_entities]
+                        results[task] = [src, pred, true]
                     
                     # debug
                     
                     #print(">> The number of processed samples:", str(num))
                     print(">> Which proteins are related to:", item)
                     print(">> src:", src)
-                    print(">> pred_entities:", pred_entities)
-                    print(">> true_entities:", true_entities)
-                    print(">> orig_pred_answer:", orig_pred_answer)
-                    input('enter..')
+                    print(">> pred:", pred)
+                    print(">> true:", true)
+                    print(">> orig_pred:", orig_pred)
+                    #input('enter..')
                     
             
             elif task in ["relation", "entity_relation"]:
                 batch_items = [] # debug
                 batch_input_texts = []
-                true_answer_list = []
+                prompt_list = []
+                true_list = []
+                
                 for item in batch_data:
                     batch_items.append(item)
-                    relation_prompt_with_test_sample = self.relation_prompt
+                    
+                    relation_prompt_with_test_sample = self.task_prompt[task]
                     relation_prompt_with_test_sample += self.model_prompt['relation_q'](item[0], item[1])
                     
+                    prompt_list.append(relation_prompt_with_test_sample)
                     batch_input_texts.append(relation_prompt_with_test_sample)
                     
-                    true_answer_list.append(item[2])
+                    # test for LLaMA - 05/21/2023
+                    #batch_input_texts.append('Answer these questions:\n' + relation_prompt_with_test_sample)
+                    
+                    true_list.append(item[2].lower())
 
-                pred_entities_list = self.generate(model, batch_input_texts)
-
-                for item, pred_answer, true_answer in zip(batch_items, pred_answer_list, true_answer_list):
-                    pred_answer = pred_answer.rsplit("\n\n", 1)[1]
-                    pred_answer = pred_answer.replace("Answer: ", "", 1).replace("A: ", "", 1)
-                    pred_answer = re.sub(r'[^a-zA-Z]', '', pred_answer)
-                    pred_answer = pred_answer.lower()
-                    true_answer = true_answer.lower()
+                pred_list = self.get_response(model, batch_input_texts)
+                
+                # debug
+                print(pred_list)
+                
+                for item, pred, prompt, true in zip(batch_items, pred_list, prompt_list, true_list):
+                    orig_pred = pred # debug
+                    
+                    pred = self.clean_response(pred, prompt)
                     
                     if len(results[task]) != 0:
-                        results[task][0].append(pred_answer)
-                        results[task][1].append(true_answer)
+                        results[task][0].append(pred)
+                        results[task][1].append(true)
                     else:
-                        results[task] = [[pred_answer], [true_answer]]
+                        results[task] = [[pred], [true]]
                     
                     # debug
-                    '''
+                    
+                    print(">> orig_pred:", orig_pred)
                     print(">> item:", item)
-                    print(">> pred_answer:", pred_answer)
-                    print(">> true_answer:", true_answer)
+                    print(">> pred:", pred)
+                    print(">> true:", true)
                     input('enter..')
-                    '''
+                    
         
             #print(f">> batch processed - len(test_data): {len(test_data) - len(self.shot_samples)}, start: {start}, stop: {stop}")
             print(f">> batch processed - len(test_data): {len(test_data)}, start: {start}, stop: {stop}")
@@ -422,8 +372,5 @@ class StringProcessor(BaseProcessor):
 
             start = stop
             stop = start + batch_size 
-            
-            # debug
-            #print(">> entity_prompt_max_length:", entity_prompt_max_length)
 
         return results

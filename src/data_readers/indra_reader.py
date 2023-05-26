@@ -1,15 +1,10 @@
-"""
-
-- INDRA reader
-
-"""
 import os
 import json
 
 
 class IndraReader:
     
-    def __init__(self, path, task=None):
+    def __init__(self, path, num_of_indra_classes):
         path = os.path.expanduser(path)
         
         orig_data_dir = os.path.join(path, "INDRA/original")
@@ -29,6 +24,7 @@ class IndraReader:
         rel_type_data = json.load(open(rel_type_file))
         
         self.rel_types = [x for x in rel_type_data]
+        self.rel_types = self.rel_types[:num_of_indra_classes]
 
 
     def _convert_data(self, orig_data_dir, converted_data_dir):

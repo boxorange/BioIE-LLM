@@ -1,15 +1,10 @@
-"""
-
-- STRING reader
-
-"""
 import os
 import json
 
 
 class StringReader:
     
-    def __init__(self, path, task=None):
+    def __init__(self, path, task, relation_query_answers):
         path = os.path.expanduser(path)
         
         if task == 'entity_relation':
@@ -19,7 +14,9 @@ class StringReader:
             
             prot_pairs = []
             with open(entity_task_result_file) as fin:
-                for line in fin.readlines()[4:]:
+                lines = fin.readlines()
+                delimiter_idx = lines.index("********************************************************************\n")
+                for line in lines[delimiter_idx+1:]:
                     line = line.replace(',,', ',')
                     
                     src, pred, true = line.split(',')
@@ -27,15 +24,12 @@ class StringReader:
                     pred = pred.strip()
                     true = true.strip()
                     
-                    #prot_pairs.append([src, true, 'True'])
-                    prot_pairs.append([src, true, 'yes'])
+                    prot_pairs.append([src, true, relation_query_answers[0]])
 
             self.test_data = prot_pairs
             
             converted_data_dir = os.path.join(path, "STRING/converted")
             self.train_data = json.load(open(os.path.join(converted_data_dir, "protein_binding_info.json")))
-            
-            
         else:
             orig_data_dir = os.path.join(path, "STRING/original")
             converted_data_dir = os.path.join(path, "STRING/converted")

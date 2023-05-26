@@ -1,5 +1,5 @@
 
-class GalacticaPromptFormatter:
+class GalacticaPrompter:
     def get_scierc_prompt(self):
         entity_q = "\n\nQ: What scientific entities are mentioned in this text?\n\n"
         entity_a = lambda entities: "A: {x}</s>\n\n".format(x=entities)
