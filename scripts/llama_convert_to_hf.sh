@@ -6,5 +6,5 @@ export OUTPUT_DIR=/scratch/ac.gpark/LLaMA_HF/7B
 
 python $CONVERT_SCRIPT \
     --input_dir $INPUT_DIR \
-    --model_size 7B \
-    --output_dir $OUTPUT_DIR
+	--model_size 7B \
+	--output_dir $OUTPUT_DIR
