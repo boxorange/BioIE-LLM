@@ -2,8 +2,8 @@
 Biological Information Extraction from Large Language Models (LLMs)
 
 This is the official code of the papers:
-[Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges](https://aclanthology.org/2023.bionlp-1.22/)
-[Comparative Performance Evaluation of Large Language Models for Extracting Molecular Interactions and Pathway Knowledge](https://arxiv.org/abs/2307.08813)
+* [Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges](https://aclanthology.org/2023.bionlp-1.22/)
+* [Comparative Performance Evaluation of Large Language Models for Extracting Molecular Interactions and Pathway Knowledge](https://arxiv.org/abs/2307.08813)
 
 
 ## Installation
@@ -27,6 +27,10 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
 <table>
     <tr>
         <th>Model</th>
+        <th>1K proteins</th>
+		<th>1K protein pairs</th>
+    </tr>
+	<tr>
         <th>Galactica (6.7B)</th>
         <th>LLaMA (7B)</th>
         <th>Alpaca (7B)</th>
@@ -35,7 +39,6 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
         <th>BioMedLM (2.7B)</th>
     </tr>
 	<tr>
-        <th>1K proteins</th>
         <td>0.166</td>
         <td>0.043</td>
         <td>0.052</td>
@@ -44,7 +47,6 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
         <td>0.069</td>
     </tr>
     <tr>
-        <th>1K protein pairs</th>
         <td>0.552</td>
         <td>0.484</td>
         <td>0.521</td>
@@ -64,6 +66,15 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
         <th>RST (11B)</th>
         <th>BioGPT-Large (1.5B)</th>
         <th>BioMedLM (2.7B)</th>
+    </tr>
+	<tr>
+        <th>Pathways</th>
+        <td>0.256</td>
+        <td>0.180</td>
+        <td>0.268</td>
+        <td>0.255</td>
+        <td>0.550</td>
+        <td>0.514</td>
     </tr>
 	<tr>
         <th>Pathways</th>
