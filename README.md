@@ -32,28 +32,34 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
     </tr>
 	<tr>
         <th>Galactica (6.7B)</th>
-        <th>LLaMA (7B)</th>
-        <th>Alpaca (7B)</th>
-        <th>RST (11B)</th>
-        <th>BioGPT-Large (1.5B)</th>
-        <th>BioMedLM (2.7B)</th>
+		<td>0.166</td>
+		<td>0.552</td>
     </tr>
 	<tr>
-        <td>0.166</td>
-        <td>0.043</td>
-        <td>0.052</td>
-        <td>0.146</td>
-        <td>0.100</td>
-        <td>0.069</td>
-    </tr>
-    <tr>
-        <td>0.552</td>
-        <td>0.484</td>
-        <td>0.521</td>
-        <td>0.529</td>
-        <td>0.504</td>
-        <td>0.643</td>
-    </tr>
+        <th>LLaMA (7B)</th>
+		<td>0.043</td>
+		<td>0.484</td>
+	</tr>
+	<tr>
+        <th>Alpaca (7B)</th>
+		<td>0.052</td>
+		<td>0.521</td>
+	</tr>
+	<tr>
+        <th>RST (11B)</th>
+		<td>0.146</td>
+		<td>0.529</td>
+	</tr>
+	<tr>
+        <th>BioGPT-Large (1.5B)</th>
+		<td>0.100</td>
+		<td>0.504</td>
+	</tr>
+	<tr>
+        <th>BioMedLM (2.7B)</th>
+		<td>0.069</td>
+		<td>0.643</td>
+	</tr>
 </table>
 
 ### KEGG Pathway Recognition ###
