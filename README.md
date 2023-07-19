@@ -24,138 +24,160 @@ To reproduce the results of the experiments, use the bash script [run.sh](script
 Here are the results of the experiments. The experiments were conducted on 8×NVIDIA V100 GPUs. Note different number of GPUs and batch size can produce slightly different results.
 
 ### Recognizing Protein-Protein Interactions ###
+* STRING Task1 - Precision for the generated binding proteins for 1K protein samples.
+* STRING Task2 - Micro F-scores for randomly selected positive and negative pairs (I.e., 1K = 500 pos + 500 neg).
+* Model prediction consistency between Task1 and Task2.
 <table>
     <tr>
         <th>Model</th>
-        <th>1K proteins</th>
-		<th>1K protein pairs</th>
+        <th>STRING Task1</th>
+		<th>STRING Task2</th>
+		<th>Consistency</th>
     </tr>
 	<tr>
         <th>Galactica (6.7B)</th>
 		<td>0.166</td>
 		<td>0.552</td>
+		<td>0.726</td>
     </tr>
 	<tr>
         <th>LLaMA (7B)</th>
 		<td>0.043</td>
 		<td>0.484</td>
+		<td>0.984</td>
 	</tr>
 	<tr>
         <th>Alpaca (7B)</th>
 		<td>0.052</td>
 		<td>0.521</td>
+		<td>0.784</td>
 	</tr>
 	<tr>
         <th>RST (11B)</th>
 		<td>0.146</td>
 		<td>0.529</td>
+		<td>1.000</td>
 	</tr>
 	<tr>
         <th>BioGPT-Large (1.5B)</th>
 		<td>0.100</td>
 		<td>0.504</td>
+		<td>0.814</td>
 	</tr>
 	<tr>
         <th>BioMedLM (2.7B)</th>
 		<td>0.069</td>
 		<td>0.643</td>
+		<td>0.861</td>
 	</tr>
 </table>
 
 ### KEGG Pathway Recognition ###
+* KEGG Task1 - Precision for the generated genes that belong to the top 20 pathways relevant to low-dose radiation exposure.
+* KEGG Task2 - Micro F-scores for randomly selected positive and negative pairs (I.e., 1K = 500 pos + 500 neg).
+* Model prediction consistency between Task1 and Task2.
 <table>
     <tr>
         <th>Model</th>
+        <th>KEGG Task1</th>
+		<th>KEGG Task2</th>
+		<th>Consistency</th>
+    </tr>
+	<tr>
         <th>Galactica (6.7B)</th>
+		<td>0.256</td>
+		<td>0.564</td>
+		<td>0.917</td>
+    </tr>
+	<tr>
         <th>LLaMA (7B)</th>
+		<td>0.180</td>
+		<td>0.562</td>
+		<td>0.881</td>
+	</tr>
+	<tr>
         <th>Alpaca (7B)</th>
+		<td>0.268</td>
+		<td>0.522</td>
+		<td>1.0</td>
+	</tr>
+	<tr>
         <th>RST (11B)</th>
+		<td>0.255</td>
+		<td>0.514</td>
+		<td>0.0</td>
+	</tr>
+	<tr>
         <th>BioGPT-Large (1.5B)</th>
+		<td>0.550</td>
+		<td>0.497</td>
+		<td>0.923</td>
+	</tr>
+	<tr>
         <th>BioMedLM (2.7B)</th>
-    </tr>
-	<tr>
-        <th>Pathways</th>
-        <td>0.256</td>
-        <td>0.180</td>
-        <td>0.268</td>
-        <td>0.255</td>
-        <td>0.550</td>
-        <td>0.514</td>
-    </tr>
-	<tr>
-        <th>Pathways</th>
-        <td>0.256</td>
-        <td>0.180</td>
-        <td>0.268</td>
-        <td>0.255</td>
-        <td>0.550</td>
-        <td>0.514</td>
-    </tr>
-    <tr>
-        <th>1K gene and pathway pairs</th>
-        <td>0.564</td>
-        <td>0.562</td>
-        <td>0.522</td>
-        <td>0.514</td>
-        <td>0.497</td>
-        <td>0.568</td>
-    </tr>
+		<td>0.514</td>
+		<td>0.568</td>
+		<td>0.821</td>
+	</tr>
 </table>
 
 ### Evaluating Gene Regulatory Relations ###
+* INDRA Task - Micro F-scores with 1K samples for each class.
 <table>
     <tr>
         <th>Model</th>
-        <th>Galactica (6.7B)</th>
-        <th>LLaMA (7B)</th>
-        <th>Alpaca (7B)</th>
-        <th>RST (11B)</th>
-        <th>BioGPT-Large (1.5B)</th>
-        <th>BioMedLM (2.7B)</th>
+        <th>2 class</th>
+        <th>3 class</th>
+        <th>4 class</th>
+        <th>5 class</th>
+        <th>6 class</th>
     </tr>
 	<tr>
-        <th>2 class</th>
+        <th>Galactica (6.7B)</th>
         <td>0.704</td>
-        <td>0.351</td>
-        <td>0.736</td>
-        <td>0.640</td>
-        <td>0.474</td>
-        <td>0.542</td>
+        <td>0.605</td>
+        <td>0.567</td>
+        <td>0.585</td>
+        <td>0.597</td>
     </tr>
     <tr>
-        <th>3 class</th>
-        <td>0.605</td>
+        <th>LLaMA (7B)</th>
+        <td>0.351</td>
         <td>0.293</td>
-        <td>0.645</td>
-        <td>0.718</td>
-        <td>0.390</td>
-        <td>0.408</td>
-    </tr>
-	<tr>
-        <th>4 class</th>
-        <td>0.567</td>
         <td>0.254</td>
-        <td>0.556</td>
-        <td>0.597</td>
-        <td>0.293</td>
-        <td>0.307</td>
-    </tr>
-	<tr>
-        <th>5 class</th>
-        <td>0.585</td>
         <td>0.219</td>
-        <td>0.636</td>
-        <td>0.667</td>
-        <td>0.328</td>
-        <td>0.230</td>
+        <td>0.212</td>
     </tr>
 	<tr>
-        <th>6 class</th>
-        <td>0.597</td>
-        <td>0.212</td>
+        <th>Alpaca (7B)</th>
+        <td>0.736</td>
+        <td>0.645</td>
+        <td>0.556</td>
+        <td>0.636</td>
         <td>0.535</td>
+    </tr>
+	<tr>
+        <th>RST (11B)</th>
+        <td>0.640</td>
+        <td>0.718</td>
+        <td>0.597</td>
+        <td>0.667</td>
         <td>0.614</td>
+    </tr>
+	<tr>
+        <th>BioGPT-Large (1.5B)</th>
+        <td>0.474</td>
+        <td>0.390</td>
+        <td>0.293</td>
+        <td>0.328</td>
         <td>0.288</td>
+    </tr>
+	<tr>
+        <th>BioMedLM (2.7B)</th>
+        <td>0.542</td>
+        <td>0.408</td>
+        <td>0.307</td>
+        <td>0.230</td>
         <td>0.195</td>
     </tr>
 </table>
