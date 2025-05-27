@@ -10,11 +10,6 @@ For the earlier study and preliminary results, please visit the companion reposi
 
 - [Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges](https://aclanthology.org/2023.bionlp-1.22/)
 
-
-## Installation
-The dependencies are listed in requirements.txt
-
-
 ## Datasets
 * [STRING DB](https://string-db.org): the human (Homo sapiens) protein network for performing a protein-protein interaction (PPI) recognition task.
 * [Negatome DB](https://pubmed.ncbi.nlm.nih.gov/24214996) a specialized repository dedicated to cataloging Non-Interacting Proteins (NIPs).
@@ -23,8 +18,10 @@ The dependencies are listed in requirements.txt
 
 
 ## Reproduction
-To reproduce the results of the experiments, use the bash script [run.sh](scripts/run.sh). You need to change model/data paths accordingly.
-The experiments were conducted on 4×NVIDIA A100 80GB GPUs. Note different number of GPUs and batch size can produce slightly different results.
+- To reproduce the results of the experiments, use the bash script [run.sh](scripts/run.sh). 
+- You need to change model/data paths accordingly.
+- The experiments were conducted on 4×NVIDIA A100 80GB GPUs. 
+> **Note**: Different number of GPUs and batch size can produce slightly different results.
 
 
 ## STRING DB PPI Task (Generative Question)
@@ -98,7 +95,7 @@ In this task, LLMs were evaluated on their ability to determine whether a given 
 
 
 ## KEGG DB Pathways affected by LDR exposure Task (Generative Task)
-This experiment evaluates the performance of Large Language Models (LLMs) in recognizing genes associated with human pathways relevant to low-dose radiation (LDR) exposure using the KEGG database.
+This experiment evaluates the performance of LLMs in recognizing genes associated with human pathways relevant to low-dose radiation (LDR) exposure using the KEGG database.
 
 ### Task Description
 - For each of the top 100 KEGG pathways associated with LDR exposure, models were prompted to generate 10 genes. These predictions were compared to the actual gene sets associated with each pathway.
@@ -134,7 +131,7 @@ This experiment evaluates the performance of Large Language Models (LLMs) in rec
 
 
 ## INDRA DB Gene Regulatory Relation Task (Multiple-choice question)
-This evaluation assesses the ability of Large Language Models (LLMs) to identify gene regulatory relationships using the INDRA database. The INDRA dataset contains statements extracted from scientific literature that describe gene-gene regulatory interactions. These statements provide rich, contextual information that models must interpret to classify relationships accurately.
+This evaluation assesses the ability of LLMs to identify gene regulatory relationships using the INDRA database. The INDRA dataset contains statements extracted from scientific literature that describe gene-gene regulatory interactions. These statements provide rich, contextual information that models must interpret to classify relationships accurately.
 
 ### Task Description
 - Models were presented with text snippets and asked to identify the correct gene regulatory relationship between two genes from a set of six options: **Activation, Inhibition, Phosphorylation, Dephosphorylation, Ubiquitination,** and **Deubiquitination**.
