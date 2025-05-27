@@ -1,6 +1,8 @@
-torch>=1.12
+torch
 transformers
 tokenizers
+datasets
+trl
 parallelformers==1.2.7
 accelerate
 markdown>=3.4
@@ -12,3 +14,6 @@ sentencepiece
 protobuf==3.20.3
 peft
 sacremoses
+wandb
+bitsandbytes
+einops

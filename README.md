@@ -1,9 +1,14 @@
 # BioIE-LLM
-Biological Information Extraction from Large Language Models (LLMs)
 
-This is the official code of the papers:
-* [Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges](https://aclanthology.org/2023.bionlp-1.22/)
-* [Comparative Performance Evaluation of Large Language Models for Extracting Molecular Interactions and Pathway Knowledge](https://arxiv.org/abs/2307.08813)
+**Biological Information Extraction from Large Language Models (LLMs)**
+
+This is the official code repository for the following paper:
+
+- [Comparative Performance Evaluation of Large Language Models for Extracting Molecular Interactions and Pathway Knowledge](https://arxiv.org/abs/2307.08813)
+
+For the earlier study and preliminary results, please visit the companion repository: [BioIE-LLM-Prelim](https://github.com/boxorange/BioIE-LLM-Prelim), which corresponds to the paper:
+
+- [Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges](https://aclanthology.org/2023.bionlp-1.22/)
 
 
 ## Installation
@@ -71,6 +76,63 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
 		<td>0.861</td>
 	</tr>
 </table>
+
+
+
+### Protein–Protein Interaction Recognition
+
+- **Micro F1**: Micro-averaged F1 score over all protein pairs.  
+- **Macro F1**: Macro-averaged F1 score (averaged per protein sample).  
+- **# Full Matches**: Number of exact protein matches retrieved out of a 1 000-protein list.
+
+| Model                              | Micro F1 | Macro F1 | # Full Matches (out of 1 000) |
+| ---------------------------------- | -------- | -------- | ----------------------------- |
+| BioGPT-Large (1.5B)                | 0.1220   | 0.1699   | 10                            |
+| BioMedLM (2.7B)                    | 0.1598   | 0.1992   | 61                            |
+| Galactica (6.7B)                   | 0.2110   | 0.2648   | 75                            |
+| Galactica (30B)                    | 0.2867   | 0.3516   | 110                           |
+| Alpaca (7B)                        | 0.0998   | 0.1388   | 16                            |
+| RST (11B)                          | 0.0987   | 0.1523   | 10                            |
+| Falcon (7B)                        | 0.0435   | 0.0632   | 7                             |
+| Falcon (40B)                       | 0.1246   | 0.1607   | 35                            |
+| MPT-Chat (7B)                      | 0.1313   | 0.1658   | 45                            |
+| MPT-Chat (30B)                     | 0.2926   | 0.3467   | 144                           |
+| LLaMA2-Chat (7B)                   | 0.2807   | 0.3498   | 89                            |
+| LLaMA2-Chat (70B)                  | 0.3517   | 0.4187   | 159                           |
+| Mistral-Instruct (7B)              | 0.2762   | 0.3299   | 126                           |
+| **Mixtral-8x7B-Instruct (46B)**    | **0.3867** | **0.4295** | **258**                      |
+| SOLAR-Instruct (10.7B)             | 0.2766   | 0.3260   | 141                           |
+
+
+
+
+### STRING/Negatome DB PPI Task – F1 Scores
+
+F1 scores for randomly selected 2,000 (1,000 positive + 1,000 negative) PPI pairs.
+
+| Model                             | Micro F1 (#shot)      | Macro F1 (#shot)      |
+|-----------------------------------|-----------------------|-----------------------|
+| BioGPT-Large (1.5B)               | 0.5700 (1-shot)       | 0.4811 (1-shot)       |
+| BioMedLM (2.7B)                   | 0.7125 (2-shot)       | 0.6866 (2-shot)       |
+| Galactica (6.7B)                  | 0.5320 (1-shot)       | 0.4568 (1-shot)       |
+| Galactica (30B)                   | 0.8585 (5-shot)       | 0.8585 (5-shot)       |
+| Alpaca (7B)                       | 0.6660 (5-shot)       | 0.6241 (5-shot)       |
+| RST (11B)                         | 0.6990 (0-shot)       | 0.6701 (0-shot)       |
+| Falcon (7B)                       | 0.5000 (1-shot)       | 0.3333 (1-shot)       |
+| Falcon (40B)                      | 0.5050 (1-shot)       | 0.3443 (1-shot)       |
+| **MPT-Chat (7B)**                 | **0.9795 (5-shot)**   | **0.9795 (5-shot)**   |
+| MPT-Chat (30B)                    | 0.9345 (5-shot)       | 0.9343 (5-shot)       |
+| LLaMA2-Chat (7B)                  | 0.8670 (5-shot)       | 0.8662 (5-shot)       |
+| LLaMA2-Chat (70B)                 | 0.9545 (5-shot)       | 0.9545 (5-shot)       |
+| Mistral-Instruct (7B)             | 0.7745 (5-shot)       | 0.7707 (5-shot)       |
+| Mixtral-8x7B-Instruct (46B)       | 0.7770 (5-shot)       | 0.7658 (5-shot)       |
+| SOLAR-Instruct (10.7B)            | 0.7615 (3-shot)       | 0.7481 (3-shot)       |
+
+**Note**: Bold indicates the best score.
+
+
+
+
 
 ### KEGG Pathway Recognition ###
 * KEGG Task1 - Precision for the generated genes that belong to the top 20 pathways relevant to low-dose radiation exposure.
@@ -185,16 +247,21 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
 
 ## Citation
 ```bibtex
+@article{doi:10.1089/cmb.2025.0078,
+  title = {Comparative Performance Evaluation of Large Language Models for Extracting Molecular Interactions and Pathway Knowledge},
+  author = {Park, Gilchan and Yoon, Byung-Jun and Luo, Xihaier and L\'{o}pez-Marrero, Vanessa and Yoo, Shinjae and Jha, Shantenu},
+  journal = {Journal of Computational Biology},
+  year = {2025},
+  doi = {10.1089/cmb.2025.0078},
+  note = {PMID: 40387594},
+  url = {https://doi.org/10.1089/cmb.2025.0078},
+  eprint = {https://doi.org/10.1089/cmb.2025.0078}
+}
 @inproceedings{park2023automated,
   title={Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges},
-  author={Park, Gilchan and Yoon, Byung-Jun and Luo, Xihaier and Lpez-Marrero, Vanessa and Johnstone, Patrick and Yoo, Shinjae and Alexander, Francis},
+  author={Park, Gilchan and Yoon, Byung-Jun and Luo, Xihaier and L\'{o}pez-Marrero, Vanessa and Johnstone, Patrick and Yoo, Shinjae and Alexander, Francis},
   booktitle={The 22nd Workshop on Biomedical Natural Language Processing and BioNLP Shared Tasks},
   pages={255--264},
-  year={2023}
-}
-@inproceedings{Park2023ComparativePE,
-  title={Comparative Performance Evaluation of Large Language Models for Extracting Molecular Interactions and Pathway Knowledge},
-  author={Gilchan Park and Byung-Jun Yoon and Xihaier Luo and Vanessa L'opez-Marrero and Patrick Johnstone and Shinjae Yoo and Francis J. Alexander},
   year={2023}
 }
 ```
