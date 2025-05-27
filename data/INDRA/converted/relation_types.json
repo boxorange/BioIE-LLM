@@ -1,0 +1,20 @@
+{
+    "Activation": {
+        "id": 0
+    },
+    "Inhibition": {
+        "id": 1
+    },
+    "Phosphorylation": {
+        "id": 2
+    },
+    "Dephosphorylation": {
+        "id": 3
+    },
+    "Ubiquitination": {
+        "id": 4
+    },
+    "Deubiquitination": {
+        "id": 5
+    }
+}

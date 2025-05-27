@@ -6,7 +6,6 @@ __pycache__/
 # C extensions
 *.so
 
-data/INDRA/
 models/
 error_list/
 result/
