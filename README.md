@@ -24,22 +24,13 @@ The dependencies are listed in requirements.txt
 
 ## Reproduction
 To reproduce the results of the experiments, use the bash script [run.sh](scripts/run.sh). You need to change model/data paths accordingly.
+The experiments were conducted on 4×NVIDIA A100 80GB GPUs. Note different number of GPUs and batch size can produce slightly different results.
 
 
-## Results
-Here are the results of the experiments. The experiments were conducted on 4×NVIDIA A100 80GB GPUs. Note different number of GPUs and batch size can produce slightly different results.
-
-
-### Recognizing Protein-Protein Interactions with LLMs
-
-This document presents the evaluation results of various Large Language Models (LLMs) on tasks involving the recognition of protein-protein interactions (PPIs) using data from the STRING and Negatome databases.
-
----
-
-### STRING DB PPI Task (Generative Question)
-
+## STRING DB PPI Task (Generative Question)
 We evaluated the ability of LLMs to generate lists of proteins that interact with a given protein, based on a human protein network from the STRING database. For this task:
 
+### Task Description
 - 1,000 proteins were randomly selected as queries.
 - Each model was prompted to generate 10 interacting proteins for each query.
 - These 10,000 generated PPI pairs (1,000 proteins × 10 predictions) were compared against known interacting proteins in the STRING DB.
@@ -73,10 +64,10 @@ We evaluated the ability of LLMs to generate lists of proteins that interact wit
 
 ---
 
-### STRING/Negatome DB PPI Task (Yes/No Classification)
-
+## STRING/Negatome DB PPI Task (Yes/No Classification)
 In this task, LLMs were evaluated on their ability to determine whether a given protein pair interacts. We used a balanced set of 2,000 pairs (1,000 known positives from STRING and 1,000 negatives from the Negatome DB).
 
+### Task Description
 - Models were prompted with yes/no questions.
 - Performance was measured using:
   - **Micro F1**: Accuracy across all examples.
@@ -108,14 +99,11 @@ In this task, LLMs were evaluated on their ability to determine whether a given 
 These results highlight both the opportunities and current limitations of LLMs in extracting biological knowledge, particularly in complex domains like protein interaction networks.
 
 
-
-### KEGG Pathway Recognition
-
+## KEGG DB Pathways affected by LDR exposure Task (Generative Task)
 This experiment evaluates the performance of Large Language Models (LLMs) in recognizing genes associated with human pathways relevant to low-dose radiation (LDR) exposure using the KEGG database.
 
-#### Task Description
-
-- **KEGG DB Pathways affected by LDR exposure Task (Generative Task)**: For each of the top 100 KEGG pathways associated with LDR exposure, models were prompted to generate 10 genes. These predictions were compared to the actual gene sets associated with each pathway.
+### Task Description
+- For each of the top 100 KEGG pathways associated with LDR exposure, models were prompted to generate 10 genes. These predictions were compared to the actual gene sets associated with each pathway.
 - Due to the extensive nature of KEGG pathways, we limited the comparison to 10 predicted genes per pathway for evaluation consistency and efficiency.
 - The evaluation metrics include:
   - **Micro F1**: Measures accuracy across all gene-pathway pairs.
@@ -153,15 +141,12 @@ Notably, performance on this task surpassed that of previous generative tasks su
 This task highlights the potential of domain-specialized LLMs for accurate biological knowledge extraction when applied to focused, well-defined contexts.
 
 
-### Evaluating Gene Regulatory Relations
-
+## INDRA DB Gene Regulatory Relation Task
 This evaluation assesses the ability of Large Language Models (LLMs) to identify gene regulatory relationships using the INDRA database. The INDRA dataset contains statements extracted from scientific literature that describe gene-gene regulatory interactions. These statements provide rich, contextual information that models must interpret to classify relationships accurately.
 
----
+### Task Description
 
-#### Task Description
-
-- **INDRA DB Gene Regulatory Relation Task**: Models were presented with text snippets and asked to identify the correct gene regulatory relationship between two genes from a set of six options: **Activation, Inhibition, Phosphorylation, Dephosphorylation, Ubiquitination,** and **Deubiquitination**.
+- Models were presented with text snippets and asked to identify the correct gene regulatory relationship between two genes from a set of six options: **Activation, Inhibition, Phosphorylation, Dephosphorylation, Ubiquitination,** and **Deubiquitination**.
 - A **multiple-choice format** was used.
 - Each class included **500 examples**, totaling **3,000 samples** across six classes.
 - Models were evaluated using **Micro F1** and **Macro F1** scores.
@@ -194,7 +179,6 @@ This evaluation assesses the ability of Large Language Models (LLMs) to identify
 ---
 
 These results highlight that **larger and domain-specialized models** outperform smaller, general-purpose ones in understanding and classifying gene regulatory relationships from biomedical text. **Mixtral-8x7B-Instruct (46B)** achieved the best performance, closely followed by **SOLAR-Instruct (10.7B)**. In contrast, models like **Alpaca (7B)** and **Falcon (7B)** demonstrated significant performance limitations, likely due to biased or inconsistent predictions, as also reflected in the confusion matrices (see Appendix F for details).
-
 
 
 ## Citation
