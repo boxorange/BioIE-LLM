@@ -96,8 +96,6 @@ In this task, LLMs were evaluated on their ability to determine whether a given 
 
 ---
 
-These results highlight both the opportunities and current limitations of LLMs in extracting biological knowledge, particularly in complex domains like protein interaction networks.
-
 
 ## KEGG DB Pathways affected by LDR exposure Task (Generative Task)
 This experiment evaluates the performance of Large Language Models (LLMs) in recognizing genes associated with human pathways relevant to low-dose radiation (LDR) exposure using the KEGG database.
@@ -110,11 +108,7 @@ This experiment evaluates the performance of Large Language Models (LLMs) in rec
   - **Macro F1**: Measures average accuracy per pathway.
   - **# Full Matches**: Number of pathways for which all 10 predicted genes matched the ground truth.
 
-Notably, performance on this task surpassed that of previous generative tasks such as the STRING DB PPI Task. This may be attributed to the more structured and context-specific appearance of pathway names in the literature, compared to the broader and more diffuse mentions of protein names. Domain-specific models such as **Mixtral-8x7B-Instruct**, **BioMedLM**, and **Galactica (30B)** showed particularly strong performance.
-
----
-
-### KEGG Task – Gene Generation Results
+### Results
 
 | Model                             | Micro F1 (#shot)    | Macro F1 (#shot)    | # Full Matches (out of 100) |
 |----------------------------------|----------------------|----------------------|------------------------------|
@@ -138,23 +132,19 @@ Notably, performance on this task surpassed that of previous generative tasks su
 
 ---
 
-This task highlights the potential of domain-specialized LLMs for accurate biological knowledge extraction when applied to focused, well-defined contexts.
 
-
-## INDRA DB Gene Regulatory Relation Task
+## INDRA DB Gene Regulatory Relation Task (Multiple-choice question)
 This evaluation assesses the ability of Large Language Models (LLMs) to identify gene regulatory relationships using the INDRA database. The INDRA dataset contains statements extracted from scientific literature that describe gene-gene regulatory interactions. These statements provide rich, contextual information that models must interpret to classify relationships accurately.
 
 ### Task Description
-
 - Models were presented with text snippets and asked to identify the correct gene regulatory relationship between two genes from a set of six options: **Activation, Inhibition, Phosphorylation, Dephosphorylation, Ubiquitination,** and **Deubiquitination**.
 - A **multiple-choice format** was used.
 - Each class included **500 examples**, totaling **3,000 samples** across six classes.
 - Models were evaluated using **Micro F1** and **Macro F1** scores.
 - Most evaluations were performed with 1-shot prompting unless otherwise noted.
 
----
 
-### INDRA Task – Multiple Choice Classification Results
+### Results
 
 | Model                             | Micro F1 (#shot)    | Macro F1 (#shot)    |
 |----------------------------------|----------------------|----------------------|
@@ -177,8 +167,6 @@ This evaluation assesses the ability of Large Language Models (LLMs) to identify
 > **Note**: Bold values indicate the highest-performing model in each column.
 
 ---
-
-These results highlight that **larger and domain-specialized models** outperform smaller, general-purpose ones in understanding and classifying gene regulatory relationships from biomedical text. **Mixtral-8x7B-Instruct (46B)** achieved the best performance, closely followed by **SOLAR-Instruct (10.7B)**. In contrast, models like **Alpaca (7B)** and **Falcon (7B)** demonstrated significant performance limitations, likely due to biased or inconsistent predictions, as also reflected in the confusion matrices (see Appendix F for details).
 
 
 ## Citation
