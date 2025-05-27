@@ -1,5 +1,6 @@
 import os
 import json
+import csv
 
 
 class StringReader:
@@ -71,8 +72,18 @@ class StringReader:
             if len(os.listdir(converted_data_dir)) == 0:
                 self._convert_data(orig_data_dir, converted_data_dir)
             
-            self.train_data = json.load(open(os.path.join(converted_data_dir, "protein_binding_info.json")))
-            self.test_data = json.load(open(os.path.join(converted_data_dir, "protein_binding_info.json")))
+            self.pos_ppi_data = json.load(open(os.path.join(converted_data_dir, "protein_binding_info.json")))
+            
+            # non-interacting proteins from Negatome 2.0
+            negative_ppi_data_dir = os.path.join(path, "Negatome")
+            negative_ppi_data_h_sapien = os.path.join(negative_ppi_data_dir, "H_sapien_Negative_Real.csv")
+            #negative_ppi_data_m_musculus = os.path.join(negative_ppi_data_dir, "Negatome_M_musculus.csv")
+
+            self.neg_ppi_data = []
+            with open(negative_ppi_data_h_sapien, encoding='utf-8-sig') as fin:
+                data = csv.reader(fin, delimiter=",")
+                for row in data:
+                    self.neg_ppi_data.append((row[0].strip(), row[1].strip()))
             
 
     def _convert_data(self, orig_data_dir, converted_data_dir):

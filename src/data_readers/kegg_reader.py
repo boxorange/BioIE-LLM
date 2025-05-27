@@ -4,8 +4,17 @@ import re
 
 
 class KeggReader:
+    """
+    Both high-dose and low-dose have the same pathways (the number of pathways: 341), but their rankings (order) are different.
     
-    def __init__(self, path, task, kegg_data_type, relation_query_answers):
+    """
+    def __init__(
+        self, 
+        path, 
+        task, 
+        kegg_data_type, 
+        relation_query_answers
+    ):
         path = os.path.expanduser(path)
 
         if task == 'entity_relation':
@@ -61,7 +70,7 @@ class KeggReader:
                 self.train_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
         else:
             orig_data_dir = os.path.join(path, "KEGG/original")
-            converted_data_dir = os.path.join(path, "KEGG/converted")
+            converted_data_dir = os.path.join(path, "KEGG/converted/new_radiation_exposure_data")
             
             if not os.path.exists(converted_data_dir):
                os.makedirs(converted_data_dir)
@@ -69,6 +78,7 @@ class KeggReader:
             if len(os.listdir(converted_data_dir)) == 0:
                 self._convert_data(orig_data_dir, converted_data_dir)
             
+            '''
             ## TODO: split data into train/dev/test.
             if kegg_data_type == 'high-dose':
                 self.train_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
@@ -76,17 +86,33 @@ class KeggReader:
             elif kegg_data_type == 'low-dose':
                 self.train_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
                 self.test_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
+            
+            # use the top 100 pathways by scores for test and use the other pathways for shots.
+            self.train_data = dict(list(self.train_data.items())[100:])
+            self.test_data = dict(list(self.test_data.items())[:100])
+            '''
+            
+            self.high_dose_data = json.load(open(os.path.join(converted_data_dir, "high_dose_pathway_genes.json")))
+            self.low_dose_data = json.load(open(os.path.join(converted_data_dir, "low_dose_pathway_genes.json")))
 
+            # use the top 100 pathways by scores for test and use the other pathways for shots.
+            if kegg_data_type == 'high-dose':
+                self.train_data = dict(list(self.high_dose_data.items())[100:])
+                self.test_data = dict(list(self.high_dose_data.items())[:100])
+            elif kegg_data_type == 'low-dose':
+                self.train_data = dict(list(self.low_dose_data.items())[100:])
+                self.test_data = dict(list(self.low_dose_data.items())[:100])
+                
 
     def _convert_data(self, orig_data_dir, converted_data_dir):
         # read high/low dose pathways.
         high_dose_pathways = []
-        with open(os.path.join(orig_data_dir, "high_dose_pathways.txt")) as fin:
+        with open(os.path.join(orig_data_dir, "new_radiation_exposure_data/high_dose_pathways.txt")) as fin:
             for line in fin:
                 high_dose_pathways.append(line.strip())
         
         low_dose_pathways = []
-        with open(os.path.join(orig_data_dir, "low_dose_pathways.txt")) as fin:
+        with open(os.path.join(orig_data_dir, "new_radiation_exposure_data/low_dose_pathways.txt")) as fin:
             for line in fin:
                 low_dose_pathways.append(line.strip())
                 
@@ -105,8 +131,10 @@ class KeggReader:
             for line in fin:
                 gene_id, gene_name = line.split('\t')
                 gene_id = gene_id.strip()
-                gene_name = re.split(r'[,;]', gene_name)
-                gene_name = [x.strip() for x in gene_name]
+                #gene_name = re.split(r'[,;]', gene_name)
+                #gene_name = [x.strip() for x in gene_name]
+                gene_name = gene_name.split('; ', 1)[0]
+                gene_name = [x.strip() for x in gene_name.split(', ')]
                 gene_name_dict[gene_id] = gene_name
                 
         # read pathway genes.

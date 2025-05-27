@@ -3,17 +3,15 @@ import time
 import string
 import random
 import re
-import itertools
 
-from itertools import chain
+from datasets import Dataset
+from itertools import chain, islice
 from datetime import timedelta
 
 # setting path
 sys.path.append('../data_readers')
 from data_readers import KeggReader
-
 from .base_processor import BaseProcessor
-
 
 random.seed(42)
 
@@ -21,32 +19,35 @@ random.seed(42)
 class KeggProcessor(BaseProcessor):
     def __init__(
         self, 
-        data_name: str, 
-        data_repo_path: str,
-        task: str,
-        test_sample_size: int, 
-        model_name: str,
-        tokenizer,
-        kegg_data_type: str,
+        *argv, 
+        **kwargs
     ):
-        super().__init__(data_name, task, test_sample_size, model_name, tokenizer)
-
-        self.data_reader = KeggReader(data_repo_path, task, kegg_data_type, self.relation_query_answers)
+        super().__init__(*argv)
+        
+        self.kegg_data_type = kwargs['kegg_data_type']
+        self.data_reader = KeggReader(self.data_repo_path, self.task, self.kegg_data_type, self.relation_query_answers)
             
         self.all_pos_relations = set() # used for relation task.
         self.all_neg_relations = set() # used for relation task.
-
-
-    def create_prompt(
+    
+    
+    def generate_datasets(
         self, 
-        n_shots: int = 0
+        n_shots, 
+        is_training
     ):
-        self.model_prompt = self.get_model_prompt()
         task = self.task
         data = self.data_reader.train_data
+        test_sample_size = self.test_sample_size
         
         self.task_prompt[task] = ""
         
+        train_dataset = None
+        val_dataset = None
+        test_dataset = None
+        
+        ## TODO: complete this when 'relation' task is used for KEGG data.
+        '''
         if n_shots == 0:
             if task == "relation":
                 all_genes = [] # to make negative relations.
@@ -67,41 +68,72 @@ class KeggProcessor(BaseProcessor):
                 # to generate the same random samples, convert it to an ordered list. 
                 self.all_pos_relations = sorted(self.all_pos_relations)
             return
-
+        '''
+        
         if task == "entity":
-            keys = list(data.keys())
-            
-            # shuffle data to get random samples.
-            random.shuffle(keys)
-            
-            # get few-shot samples.
-            for key in keys:
+            if n_shots > 0:
+                keys = list(data.keys())
                 
-                ## TODO: remove this later.
-                #if len(data[key]) > 10:
-                #	continue
+                # shuffle data to get random samples.
+                random.shuffle(keys)
+                
+                # get few-shot samples.
+                for key in keys:
+                    
+                    ## TODO: remove this later.
+                    #if len(data[key]) > 10:
+                    #	continue
 
-                self.shot_samples.append((key, data[key]))
-                if len(self.shot_samples) >= n_shots:
-                    break
+                    self.shot_samples.append((key, data[key]))
+                    if len(self.shot_samples) >= n_shots:
+                        break
 
-            '''
-            # get few-shot samples.
-            sorted_data = sorted(data.items(), key = lambda item : len(item[1]))
-            for k, v in sorted_data:
-                self.shot_samples.append((k, v))
-                if len(self.shot_samples) >= n_shots:
-                    break
-            '''
+                '''
+                # get few-shot samples.
+                sorted_data = sorted(data.items(), key = lambda item : len(item[1]))
+                for k, v in sorted_data:
+                    self.shot_samples.append((k, v))
+                    if len(self.shot_samples) >= n_shots:
+                        break
+                '''
 
-            for sample in self.shot_samples:
-                self.task_prompt[task] += self.model_prompt['entity_q'](sample[0])
+                for sample in self.shot_samples:
+                    self.task_prompt[task] += self.model_prompt['entity_q'](sample[0])
+                    
+                    ## TODO: for now, only use the first name of the list. 
+                    entity_list = [x[0] for x in sample[1]]
+                    
+                    self.task_prompt[task] += self.model_prompt['entity_a'](", ".join(entity_list))
+                
+            ## TODO: get the size of training/val data as an argument.
+            if is_training:
+                sample_keys = random.sample(sorted(data), test_sample_size//2)
                 
                 ## TODO: for now, only use the first name of the list. 
-                entity_list = [x[0] for x in sample[1]]
+                # val_dataset = {k: v[0] for k, v in data.items() if k in sample_keys}
+                # val_dataset = {k: list(chain.from_iterable(v)) for k, v in data.items() if k in sample_keys}
+                val_dataset = {k: [x[0] for x in v] for k, v in data.items() if k in sample_keys}
+                                
+                for key in sample_keys:
+                    del data[key]
                 
-                self.task_prompt[task] += self.model_prompt['entity_a'](", ".join(entity_list))
+                ## TODO: for now, only use the first name of the list.
+                # train_dataset = {k: v[0] for k, v in data.items()}
+                # train_dataset = {k: list(chain.from_iterable(v)) for k, v in data.items()}
+                train_dataset = {k: [x[0] for x in v] for k, v in data.items()}
+
+                # val_dataset = self.format_dataset(val_dataset, task)
+                # train_dataset = self.format_dataset(train_dataset, task)
         
+        self.train_dataset = train_dataset
+        self.val_dataset = val_dataset
+        
+        assert test_sample_size <= len(self.data_reader.test_data)
+        
+        self.test_dataset = dict(list(self.data_reader.test_data.items())[:test_sample_size])
+        
+        ## TODO: complete this when 'relation' task is used for KEGG data.
+        '''
         elif task in ["relation", "entity_relation"]:
             # len(self.all_pos_relations): 17,552
             # len(self.all_neg_relations): 190,148
@@ -141,27 +173,119 @@ class KeggProcessor(BaseProcessor):
             
             for i in neg_relations:
                 self.all_neg_relations.remove(i)
-
+        '''
+        
         # debug
-        if len(self.task_prompt[task]) != 0:
-            print(self.task_prompt[task])
+        if self.get_rank() == 0:
+            if len(self.task_prompt[task]) != 0:
+                print(self.task_prompt[task])
+                # input('enter..')
+            
+
+    def format_dataset(
+        self, 
+        dataset, 
+        data_type
+    ):
+        task = self.task
         
-        #input('enter..')
-        
+        if task == "entity":
+            if data_type in ['train', 'validation']:
+                
+                ## TODO: fix this.
+                formatted_dataset = [
+                                        {
+                                            "text": f"{self.model_prompt['entity_q'](k)}{self.model_prompt['entity_a'](', '.join(list(chain.from_iterable(v))))}",
+                                            "answer": ', '.join(list(chain.from_iterable(v))) # use all names.
+                                        }
+                                        for k, v in dataset.items()
+                                    ]
+            elif data_type == 'test':
+                formatted_dataset = [
+                                        {
+                                            "entity": k,
+                                            "text": f"{self.task_prompt[task]}{self.model_prompt['entity_q'](k)}",
+                                            "answer": '__DELIMITER__'.join(list(chain.from_iterable(v))) # use all names.
+                                            # "answer": '__DELIMITER__'.join([x[0] for x in v])) # only use the first name of the list. 
+                                        }
+                                        for k, v in dataset.items()
+                                    ]
+
+        formatted_dataset = Dataset.from_list(formatted_dataset)
+
+        return formatted_dataset
+
     
+    def update_results(
+        self,
+        decoded_entity, 
+        decoded_pred, 
+        decoded_gold
+    ):
+        task = self.task
+
+        decoded_gold = [x.split('__DELIMITER__') for x in decoded_gold]
+        decoded_gold = [[x.strip() for x in sublist] for sublist in decoded_gold]
+        
+        for item, pred, true in zip(decoded_entity, decoded_pred, decoded_gold):
+            orig_pred = pred # debug
+            orig_true = true # debug
+
+            pred = self.clean_response(pred, true=true)
+            
+            ## TODO: get max_entity_list_len as an argument.
+            ## TODO: currently, only check 10 entities. Increase this for further prediction evaluation.
+            pred, true = self.sort_and_pad(pred, true, max_entity_list_len=10)
+
+            # store the source item in the query to be used in the relation task. 04/12/2023
+            src = [item] * len(pred)
+            if len(self.results[task]['preprocessed']) != 0:
+                self.results[task]['preprocessed'][0].extend(src)
+                self.results[task]['preprocessed'][1].extend(pred)
+                self.results[task]['preprocessed'][2].extend(true)
+            else:
+                self.results[task]['preprocessed'] = [src, pred, true]
+            
+            ## TODO: very naive way. find a better way.
+            orig_pred_list = [x.strip() for x in orig_pred.split(',')]
+            orig_true_list = orig_true
+            
+            common_values = list(set(orig_pred_list) & set(orig_true_list))
+            orig_pred_list = common_values + list(set(orig_pred_list) - set(common_values))
+            orig_true_list = common_values + list(set(orig_true_list) - set(common_values))
+            orig_pred_txt = ', '.join(orig_pred_list)
+            orig_true_txt = ', '.join(orig_true_list)
+
+            self.results[task]['original'].append((item, orig_pred_txt, orig_true_txt))
+            
+            # debug
+            if self.get_rank() == 0:
+                print(">> Which genes are associated with", item + "?")
+                print(">> orig_pred:", orig_pred)
+                print(">> orig_true:", orig_true)
+                print(">> pred:", pred)
+                print(">> true:", true)
+
+                # input('enter..')
+
+
     def infer(
         self,
         model, 
+        generation_config,
         batch_size: int = 1,
     ):
-        test_data = self.data_reader.test_data
+        test_data = self.test_dataset
         task = self.task
         results = self.results
         
+        # shots are from train data, so this isn't necessary. 08/28/2023
+        '''
         ## TODO: make it cleaner later.
         if task == "entity":
             shots_keys = [x[0] for x in self.shot_samples]
-
+        '''
+        
         ## TODO: to reduce the number of test samples for a preliminary test. 
         if task == "relation":
             test_sample_size = self.test_sample_size
@@ -189,48 +313,45 @@ class KeggProcessor(BaseProcessor):
         stop = start + batch_size
 
         while True:
-            # ref: dict(itertools.islice(d.items(), 2)) # for dictionary
-            batch_data = itertools.islice(test_data, start, stop)
+            # ref: dict(islice(d.items(), 2)) # for dictionary
+            batch_data = islice(test_data, start, stop)
             
             ## TODO: make it cleaner later.
             if task == "entity":
                 batch_items = [] # debug
                 batch_input_texts = []
-                prompt_list = []
                 true_list = []
 
                 for item in batch_data:
+                    # shots are from train data, so this isn't necessary. 08/28/2023
+                    '''
                     # skip samples used in few-shots.
                     if item in shots_keys:
                         continue
+                    '''
                     
                     batch_items.append(item)
                     
                     entity_prompt_with_test_sample = self.task_prompt[task]
                     entity_prompt_with_test_sample += self.model_prompt['entity_q'](item)
                     
-                    prompt_list.append(entity_prompt_with_test_sample)
                     batch_input_texts.append(entity_prompt_with_test_sample)
                     true_list.append(test_data[item])
 
-                pred_list = self.get_response(model, batch_input_texts)
+                pred_list = self.get_response(model, generation_config, batch_input_texts)
                 
-                
-                # debug
-                print(pred_list)
-                
-
-                for item, pred, prompt, true in zip(batch_items, pred_list, prompt_list, true_list):
-                    orig_pred = pred # debug
-                    
-                    pred = self.clean_response(pred, prompt)
-
+                for item, pred, true in zip(batch_items, pred_list, true_list):
                     # use all names.
                     true = list(chain.from_iterable(true))
                     #true = [x[0] for x in true] # only use the first name of the list. 
+                    
+                    orig_pred = pred # debug
+                    orig_true = true # debug
 
+                    pred = self.clean_response(pred, true=true)
                     pred, true = self.sort_and_pad(pred, true)
-
+                    
+                    '''
                     ## TODO: for now, check only precision. 03/14/2023
                     pred = [x for x in pred if x != 'NONE']
                     true = [x for x in true if x != 'NONE']
@@ -238,6 +359,7 @@ class KeggProcessor(BaseProcessor):
                         pred = pred[:len(true)]
                     elif len(true) > len(pred):
                         true = true[:len(pred)]
+                    '''
                     
                     # store the source item in the query to be used in the relation task. 04/12/2023
                     src = [item] * len(pred)
@@ -249,20 +371,19 @@ class KeggProcessor(BaseProcessor):
                         results[task] = [src, pred, true]
 
                     # debug
-                    
-                    #print(">> The number of processed samples:", str(num))
-                    print(">> Which genes are involved in:", item)
-                    print(">> src:", src)
+
+                    print(">> Which genes are associated with", item + "?")
+                    print(">> orig_pred:", orig_pred)
+                    print(">> orig_true:", orig_true)
                     print(">> pred:", pred)
                     print(">> true:", true)
-                    print(">> orig_pred:", orig_pred)
-                    #input('enter..')
+                    # input('enter..')
+                    
                     
             
             elif task in ["relation", "entity_relation"]:
                 batch_items = [] # debug
                 batch_input_texts = []
-                prompt_list = []
                 true_list = []
 
                 for item in batch_data:
@@ -271,7 +392,6 @@ class KeggProcessor(BaseProcessor):
                     relation_prompt_with_test_sample = self.task_prompt[task]
                     relation_prompt_with_test_sample += self.model_prompt['relation_q'](item[0], item[1])
                     
-                    prompt_list.append(relation_prompt_with_test_sample)
                     batch_input_texts.append(relation_prompt_with_test_sample)
                     
                     # test for LLaMA - 05/21/2023
@@ -279,17 +399,17 @@ class KeggProcessor(BaseProcessor):
                     
                     true_list.append(item[2].lower())
 
-                pred_list = self.get_response(model, batch_input_texts)
+                pred_list = self.get_response(model, generation_config, batch_input_texts)
                 
                 
                 # debug
                 print(pred_list)
                 
                 
-                for item, pred, prompt, true in zip(batch_items, pred_list, prompt_list, true_list):
+                for item, pred, true in zip(batch_items, pred_list, true_list):
                     orig_pred = pred # debug
                     
-                    pred = self.clean_response(pred, prompt)
+                    pred = self.clean_response(true=true)
 
                     if len(results[task]) != 0:
                         results[task][0].append(pred)

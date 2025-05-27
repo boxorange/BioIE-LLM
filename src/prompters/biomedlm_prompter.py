@@ -1,5 +1,25 @@
 
 class BioMedLMPrompter:
+    def get_scierc_prompt(self):
+        entity_q = "\n\nQ: What scientific entities are mentioned in this text?\n\n"
+        entity_a = lambda entities: "A: {x}\n\n".format(x=entities)
+        
+        #entity_type_q = lambda entity, choices: "Q: Which one of the following is the entity type of \"{x}\"? {y} \n\n".format(x=entity, y=choices)
+        entity_type_q = lambda entity, choices: "\n\nQ: Which of the following is the entity type of \"{x}\"? {y}\n\n".format(x=entity, y=choices)
+        entity_type_a = lambda num, entity_type: "A: ({x}) {y}\n\n".format(x=num, y=entity_type)
+                    
+        #relation_type_q = lambda e1, e2, choices: "Q: What is the relation between between \"{x}\" and \"{y}\"? {z}\n\n".format(x=e1, y=e2, z=choices)
+        relation_type_q = lambda e1, e2, choices: "\n\nQ: Which of the following is the relation type between \"{x}\" and \"{y}\"? {z}\n\n".format(x=e1, y=e2, z=choices)
+        relation_type_a = lambda num, relation_type: "A: ({x}) {y}\n\n".format(x=num, y=relation_type)
+        
+        return {'entity_q': entity_q,
+                'entity_a': entity_a,
+                'entity_type_q': entity_type_q,
+                'entity_type_a': entity_type_a,
+                'relation_type_q': relation_type_q,
+                'relation_type_a': relation_type_a}
+
+    
     def get_string_prompt(self):
         """
         - Question, Answer produce different inferences from Q, A. 02/09/2023
@@ -19,6 +39,11 @@ class BioMedLMPrompter:
         entity_q = lambda entity: "The following proteins interact with the protein \"{x}\":".format(x=entity)
         #entity_q = lambda entity: "Question: Which proteins are related to {x}? Answer:".format(x=entity)
         entity_a = lambda entities: " {x}\n\n".format(x=entities)
+        
+        
+        entity_q = lambda entity: "QUESTION: Which proteins interact with {x}?\nANSWER:".format(x=entity)
+        entity_a = lambda entities: " {x}\n".format(x=entities)
+        
         
         
         #relation_q = lambda e1, e2: "Question: Do the two proteins \"{x}\" and \"{y}\" bind each other?\n\nAnswer:".format(x=e1, y=e2)
@@ -94,6 +119,27 @@ class BioMedLMPrompter:
         #relation_type_q = lambda e1, e2, text, choices: "Question: Given the options: {z}, which one is the relation type between {x} and {y}? Context: \"{t}\"".format(x=e1, y=e2, t=text, z=choices)
         #relation_type_a = lambda relation_type: " Answer: {x} ".format(x=relation_type)
         
+        
+        return {'relation_type_q': relation_type_q,
+                'relation_type_a': relation_type_a}
+    
+    
+    def get_lll_prompt(self):
+        """
+        
+        """
+
+        # relation_type_q = lambda e1, e2, t, c: "Question: Given the options: {c}, which one is the relation type between {x} and {y} in this text? Text: {z}\n\nAnswer:".format(x=e1, y=e2, z=t, c=c)
+        relation_type_q = lambda e1, e2, t, c: "{z}\n\nQuestion: Given the options: {c}, which one is the relation type between {x} and {y} in the text above?\n\nAnswer:".format(x=e1, y=e2, z=t, c=c)
+        
+        # relation_type_q = lambda e1, e2, t, c: "Question: we find {x} and {y}. Among the choices {c}, what term best describes the type of relationship between them in this text? Text:{z}\n\nAnswer:".format(x=e1, y=e2, z=t, c=c)
+        
+        
+        # relation_type_q = lambda e1, e2, t: "{z}\n\nQuestion: Do {x} and {y} interact with each other based on the text above?\n\nAnswer:".format(x=e1, y=e2, z=t)
+        # relation_type_q = lambda e1, e2, t: "{z}\n\nQuestion: Do {x} and {y} interact with each other in the text above?\n\nAnswer:".format(x=e1, y=e2, z=t)
+        
+        
+        relation_type_a = lambda answer: " {x}\n\n".format(x=answer)
         
         return {'relation_type_q': relation_type_q,
                 'relation_type_a': relation_type_a}

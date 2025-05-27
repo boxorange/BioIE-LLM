@@ -1,30 +1,195 @@
 import os
-from datetime import datetime
+import pprint
 import numpy as np
-from typing import List
-from sklearn.metrics import precision_recall_fscore_support, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
+from datetime import datetime
+from typing import List
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix, ConfusionMatrixDisplay
 
 
-def compute_metrics_and_save_results(
-        src, 
-        pred, 
-        true, 
-        task, 
-        labels, 
-        output_dir,
-        batch_size,
-        n_shots,
-        test_sample_size,
-        task_prompt,
-        data_name,
-        kegg_data_type,
-        num_of_indra_classes,
-        exec_time,
+def compute_metrics(pred=[], true=[]):
+    
+    pred = np.array(pred)
+    true = np.array(true)
+
+    accuracy = accuracy_score(true, pred)
+    macro_p, macro_r, macro_f, _  = precision_recall_fscore_support(true, pred, average='macro')
+    micro_p, micro_r, micro_f, _  = precision_recall_fscore_support(true, pred, average='micro')
+    weighted_p, weighted_r, weighted_f, _  = precision_recall_fscore_support(true, pred, average='weighted')
+    
+    return {
+        'accuracy': accuracy,
+        'macro_p': macro_p,
+        'macro_r': macro_r,
+        'macro_f': macro_f,
+        'micro_p': micro_p,
+        'micro_r': micro_r,
+        'micro_f': micro_f,
+        'weighted_p': weighted_p,
+        'weighted_r': weighted_r,
+        'weighted_f': weighted_f,
+    }
+
+
+def save_results(
+        scores={},
+        src=None,
+        orig=[],
+        pred=[], 
+        true=[],
+        task="", 
+        labels=None, 
+        output_dir="", 
+        num_processes=1,
+        batch_size=1,
+        n_shots=0,
+        test_sample_size=1,
+        model_config="", 
+        generation_config="", 
+        task_prompt="", 
+        data_name="", 
+        kegg_data_type="", 
+        num_of_indra_classes=6,
+        num_of_kbase_classes=14,
+        exec_time="", 
     ):
     pred = np.array(pred)
     true = np.array(true)
+
+    accuracy = scores['accuracy']
+    macro_p = scores['macro_p']
+    macro_r = scores['macro_r']
+    macro_f = scores['macro_f']
+    micro_p = scores['micro_p']
+    micro_r = scores['micro_r']
+    micro_f = scores['micro_f']
+    weighted_p = scores['weighted_p']
+    weighted_r = scores['weighted_r']
+    weighted_f = scores['weighted_f']
     
+    task_output_dir = os.path.join(output_dir, task)
+    
+    if not os.path.exists(task_output_dir):
+        os.makedirs(task_output_dir)
+    
+    # get current date and time
+    current_datetime = str(datetime.now())
+
+    with open(os.path.join(task_output_dir, task + "_result_" + current_datetime + ".txt"), "w+") as fout:
+        exp_info = f">> N-shots: {n_shots}\n"
+        exp_info += f">> Number of processes: {num_processes}\n"
+        exp_info += f">> Batch size per process: {batch_size}, Total batch size: {batch_size*num_processes}\n"
+        exp_info += f">> Test sample size: {test_sample_size}\n"
+        
+        if data_name == "kegg":
+            exp_info += f">> KEGG data type: {kegg_data_type}\n"
+        elif data_name == "indra":
+            exp_info += f">> Number of INDRA classes: {num_of_indra_classes}\n"
+        elif data_name == "kbase":
+            exp_info += f">> Number of KBase classes: {num_of_kbase_classes}\n"
+        
+        exp_info += f">> Execution time: {exec_time}\n"		
+        fout.write(exp_info)
+        
+        if model_config != "":
+            fout.write(">> Model configuration:\n")
+            model_config_info = pprint.pformat(model_config)
+            fout.write(model_config_info)
+        
+        if generation_config != "":
+            fout.write(">> Generation configuration:\n")
+            model_config_info = pprint.pformat(generation_config)
+            fout.write(model_config_info)
+        
+        fout.write(f">> Task prompt:\n{task_prompt}\n")
+        fout.write("--------------------------------------------------------------------\n")
+        fout.write(f">>             Accuracy: {accuracy:.4f}\n")
+        fout.write(f">> (macro)    Precision: {macro_p:.4f}, Recall: {macro_r:.4f}, F1: {macro_f:.4f}\n")
+        fout.write(f">> (micro)    Precision: {micro_p:.4f}, Recall: {micro_r:.4f}, F1: {micro_f:.4f}\n")
+        fout.write(f">> (weighted) Precision: {weighted_p:.4f}, Recall: {weighted_r:.4f}, F1: {weighted_f:.4f}\n")
+        fout.write("====================================================================\n")
+        
+        if src != None:
+            fout.write("Num, Src, Pred, True:\n")
+            fout.write("********************************************************************\n")
+            for i, (s, p, t) in enumerate(zip(src, pred.tolist(), true.tolist()), 1):
+                if isinstance(s, list):
+                    s = '(' + ', '.join(sorted(s)) + ')'
+                fout.write(str(i) + ", " + s + ", " + p + ", " + t + "\n")
+        else:
+            fout.write("Num, Pred, True:\n")
+            fout.write("********************************************************************\n")
+            for i, (p, t) in enumerate(zip(pred.tolist(), true.tolist()), 1):
+                fout.write(str(i) + ", " + p + ", " + t + "\n")
+                
+        if len(orig) > 0:
+            fout.write("####################################################################\n")
+            fout.write("<< Original texts >>\n")
+            for i, (s, p, t) in enumerate(orig, 1):
+                fout.write(">> No: " + str(i) + "\n")
+                fout.write(">> Entity: " + s + "\n")
+                fout.write(">> Pred: " + p + "\n")
+                fout.write(">> True: " + t + "\n")
+    
+    
+    if labels != None:
+        labels = [x.lower() for x in labels]
+        labels = np.array(labels)
+        
+        # remove values not in labels. 05/23/2023
+        filtered_pred = pred[np.isin(pred, labels)]
+        no_label_idx = np.argwhere(~np.isin(pred, labels)).ravel()
+        filtered_true = np.delete(true, no_label_idx)
+        
+        cm = confusion_matrix(filtered_true, filtered_pred, labels=labels)
+        cm_disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=labels)
+
+
+        if len(labels) > 3:
+            dpi = 500
+            xticks_rotation = 65
+        else:
+            dpi = 300
+            xticks_rotation = "horizontal"
+        
+        
+        cm_disp.plot(xticks_rotation=xticks_rotation)
+        
+        plt.tight_layout()
+        cm_disp.figure_.savefig(os.path.join(task_output_dir, task + "_confusion_matrix_" + current_datetime + ".png"), dpi=dpi, pad_inches=5)
+        
+        # debug
+        if len(no_label_idx) > 0:
+            print('>> List of generated texts not in labels')
+            for p, t in zip(np.take(pred, no_label_idx), np.take(true, no_label_idx)):
+                print(p, t)
+
+
+def compute_metrics_and_save_results(
+        src=None, 
+        pred=[], 
+        true=[], 
+        orig=[],
+        task="", 
+        labels=None, 
+        output_dir="", 
+        num_processes=1,
+        batch_size=1,
+        n_shots=0,
+        test_sample_size=1,
+        model_config="", 
+        generation_config="", 
+        task_prompt="", 
+        data_name="", 
+        kegg_data_type="", 
+        num_of_indra_classes=6,
+        num_of_kbase_classes=14,
+        exec_time="", 
+    ):
+    pred = np.array(pred)
+    true = np.array(true)
+
+    accuracy = accuracy_score(true, pred)
     macro_p, macro_r, macro_f, _  = precision_recall_fscore_support(true, pred, average='macro')
     micro_p, micro_r, micro_f, _  = precision_recall_fscore_support(true, pred, average='micro')
     weighted_p, weighted_r, weighted_f, _  = precision_recall_fscore_support(true, pred, average='weighted')
@@ -38,32 +203,59 @@ def compute_metrics_and_save_results(
     current_datetime = str(datetime.now())
 
     with open(os.path.join(task_output_dir, task + "_result_" + current_datetime + ".txt"), "w+") as fout:
+        exp_info = f">> N-shots: {n_shots}\n"
+        exp_info += f">> Number of processes: {num_processes}\n"
+        exp_info += f">> Batch size per process: {batch_size}, Total batch size: {batch_size*num_processes}\n"
+        exp_info += f">> Test sample size: {test_sample_size}\n"
+        
         if data_name == "kegg":
-            fout.write(f">> N-shots: {n_shots}, Batch size: {batch_size}, Test sample size: {test_sample_size}, Data type: {kegg_data_type}, Execution time: {exec_time}\n")
+            exp_info += f">> KEGG data type: {kegg_data_type}\n"
         elif data_name == "indra":
-            fout.write(f">> N-shots: {n_shots}, Batch size: {batch_size}, Test sample size: {test_sample_size}, Number of classes: {num_of_indra_classes}, Execution time: {exec_time}\n")
-        else:
-            fout.write(f">> N-shots: {n_shots}, Batch size: {batch_size}, Test sample size: {test_sample_size}, Execution time: {exec_time}\n")
+            exp_info += f">> Number of INDRA classes: {num_of_indra_classes}\n"
+        elif data_name == "kbase":
+            exp_info += f">> Number of KBase classes: {num_of_kbase_classes}\n"
+        
+        exp_info += f">> Execution time: {exec_time}\n"		
+        fout.write(exp_info)
+        
+        fout.write(">> Model configuration:\n")
+        model_config_info = pprint.pformat(model_config)
+        fout.write(model_config_info)
+        
+        fout.write(">> Generation configuration:\n")
+        model_config_info = pprint.pformat(generation_config)
+        fout.write(model_config_info)
         
         fout.write(f">> Task prompt:\n{task_prompt}\n")
         fout.write("--------------------------------------------------------------------\n")
-        
+        fout.write(f">>             Accuracy: {accuracy:.4f}\n")
         fout.write(f">> (macro)    Precision: {macro_p:.4f}, Recall: {macro_r:.4f}, F1: {macro_f:.4f}\n")
         fout.write(f">> (micro)    Precision: {micro_p:.4f}, Recall: {micro_r:.4f}, F1: {micro_f:.4f}\n")
         fout.write(f">> (weighted) Precision: {weighted_p:.4f}, Recall: {weighted_r:.4f}, F1: {weighted_f:.4f}\n")
         fout.write("====================================================================\n")
         
-        # store the source item in the query to be used in entity_relation task for STRING, KEGG. 04/12/2023
         if src != None:
-            fout.write("Src, Pred, True:\n")
+            fout.write("Num, Src, Pred, True:\n")
             fout.write("********************************************************************\n")
-            for s, p, t in zip(src, pred.tolist(), true.tolist()):
-                fout.write(s + ", " + p + ", " + t + "\n")
+            for i, (s, p, t) in enumerate(zip(src, pred.tolist(), true.tolist()), 1):
+                if isinstance(s, list):
+                    s = '(' + ', '.join(sorted(s)) + ')'
+                fout.write(str(i) + ", " + s + ", " + p + ", " + t + "\n")
         else:
-            fout.write("Pred, True:\n")
+            fout.write("Num, Pred, True:\n")
             fout.write("********************************************************************\n")
-            for p, t in zip(pred.tolist(), true.tolist()):
-                fout.write(p + ", " + t + "\n")
+            for i, (p, t) in enumerate(zip(pred.tolist(), true.tolist()), 1):
+                fout.write(str(i) + ", " + p + ", " + t + "\n")
+                
+        if len(orig) > 0:
+            fout.write("####################################################################\n")
+            fout.write("<< Original texts >>\n")
+            for i, (s, p, t) in enumerate(orig, 1):
+                fout.write(">> No: " + str(i) + "\n")
+                fout.write(">> Entity: " + s + "\n")
+                fout.write(">> Pred: " + p + "\n")
+                fout.write(">> True: " + t + "\n")
+    
     
     if labels != None:
         labels = [x.lower() for x in labels]
