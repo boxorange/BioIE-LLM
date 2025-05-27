@@ -26,66 +26,30 @@ To reproduce the results of the experiments, use the bash script [run.sh](script
 
 
 ## Results
-Here are the results of the experiments. The experiments were conducted on 8×NVIDIA V100 GPUs. Note different number of GPUs and batch size can produce slightly different results.
+Here are the results of the experiments. The experiments were conducted on 4×NVIDIA A100 80GB GPUs. Note different number of GPUs and batch size can produce slightly different results.
 
-### Recognizing Protein-Protein Interactions ###
-* STRING Task1 - Precision for the generated binding proteins for 1K protein samples.
-* STRING Task2 - Micro F-scores for randomly selected positive and negative pairs (I.e., 1K = 500 pos + 500 neg).
-* Model prediction consistency between Task1 and Task2.
-<table>
-    <tr>
-        <th>Model</th>
-        <th>STRING Task1</th>
-		<th>STRING Task2</th>
-		<th>Consistency</th>
-    </tr>
-	<tr>
-        <th>Galactica (6.7B)</th>
-		<td>0.166</td>
-		<td>0.552</td>
-		<td>0.726</td>
-    </tr>
-	<tr>
-        <th>LLaMA (7B)</th>
-		<td>0.043</td>
-		<td>0.484</td>
-		<td>0.984</td>
-	</tr>
-	<tr>
-        <th>Alpaca (7B)</th>
-		<td>0.052</td>
-		<td>0.521</td>
-		<td>0.784</td>
-	</tr>
-	<tr>
-        <th>RST (11B)</th>
-		<td>0.146</td>
-		<td>0.529</td>
-		<td>1.000</td>
-	</tr>
-	<tr>
-        <th>BioGPT-Large (1.5B)</th>
-		<td>0.100</td>
-		<td>0.504</td>
-		<td>0.814</td>
-	</tr>
-	<tr>
-        <th>BioMedLM (2.7B)</th>
-		<td>0.069</td>
-		<td>0.643</td>
-		<td>0.861</td>
-	</tr>
-</table>
+# Recognizing Protein-Protein Interactions with LLMs
 
+This document presents the evaluation results of various Large Language Models (LLMs) on tasks involving the recognition of protein-protein interactions (PPIs) using data from the STRING and Negatome databases.
 
+---
 
-### Protein–Protein Interaction Recognition
+## STRING DB PPI Task (Generative Question)
 
-- **Micro F1**: Micro-averaged F1 score over all protein pairs.  
-- **Macro F1**: Macro-averaged F1 score (averaged per protein sample).  
-- **# Full Matches**: Number of exact protein matches retrieved out of a 1 000-protein list.
+We evaluated the ability of LLMs to generate lists of proteins that interact with a given protein, based on a human protein network from the STRING database. For this task:
 
-| Model                              | Micro F1 | Macro F1 | # Full Matches (out of 1 000) |
+- 1,000 proteins were randomly selected as queries.
+- Each model was prompted to generate 10 interacting proteins for each query.
+- These 10,000 generated PPI pairs (1,000 proteins × 10 predictions) were compared against known interacting proteins in the STRING DB.
+- Due to model generation constraints and inference efficiency, only the top 10 predictions per protein were considered.
+- Evaluation metrics include:
+  - **Micro F1**: Measures prediction accuracy over all 10,000 PPI pairs.
+  - **Macro F1**: Measures average prediction accuracy per individual protein.
+  - **# Full Matches**: The number of proteins (out of 1,000) for which all 10 predicted interactors matched the ground truth.
+
+### Results
+
+| Model                              | Micro F1 | Macro F1 | # Full Matches (out of 1,000) |
 | ---------------------------------- | -------- | -------- | ----------------------------- |
 | BioGPT-Large (1.5B)                | 0.1220   | 0.1699   | 10                            |
 | BioMedLM (2.7B)                    | 0.1598   | 0.1992   | 61                            |
@@ -99,38 +63,47 @@ Here are the results of the experiments. The experiments were conducted on 8×NV
 | MPT-Chat (30B)                     | 0.2926   | 0.3467   | 144                           |
 | LLaMA2-Chat (7B)                   | 0.2807   | 0.3498   | 89                            |
 | LLaMA2-Chat (70B)                  | 0.3517   | 0.4187   | 159                           |
-| Mistral-Instruct (7B)              | 0.2762   | 0.3299   | 126                           |
+| Mistral-Instruct (7B)             | 0.2762   | 0.3299   | 126                           |
 | **Mixtral-8x7B-Instruct (46B)**    | **0.3867** | **0.4295** | **258**                      |
-| SOLAR-Instruct (10.7B)             | 0.2766   | 0.3260   | 141                           |
+| SOLAR-Instruct (10.7B)            | 0.2766   | 0.3260   | 141                           |
 
+> **Note**: A 5-shot prompting strategy was used. Bolded values indicate the best-performing model.
 
+---
 
+## STRING/Negatome DB PPI Task (Yes/No Classification)
 
-### STRING/Negatome DB PPI Task – F1 Scores
+In this task, LLMs were evaluated on their ability to determine whether a given protein pair interacts. We used a balanced set of 2,000 pairs (1,000 known positives from STRING and 1,000 negatives from the Negatome DB).
 
-F1 scores for randomly selected 2,000 (1,000 positive + 1,000 negative) PPI pairs.
+- Models were prompted with yes/no questions.
+- Performance was measured using:
+  - **Micro F1**: Accuracy across all examples.
+  - **Macro F1**: Average F1 score per class.
+- The number of shots (example demonstrations) used per model is also noted.
+
+### Results
 
 | Model                             | Micro F1 (#shot)      | Macro F1 (#shot)      |
-|-----------------------------------|-----------------------|-----------------------|
-| BioGPT-Large (1.5B)               | 0.5700 (1-shot)       | 0.4811 (1-shot)       |
-| BioMedLM (2.7B)                   | 0.7125 (2-shot)       | 0.6866 (2-shot)       |
-| Galactica (6.7B)                  | 0.5320 (1-shot)       | 0.4568 (1-shot)       |
-| Galactica (30B)                   | 0.8585 (5-shot)       | 0.8585 (5-shot)       |
-| Alpaca (7B)                       | 0.6660 (5-shot)       | 0.6241 (5-shot)       |
-| RST (11B)                         | 0.6990 (0-shot)       | 0.6701 (0-shot)       |
-| Falcon (7B)                       | 0.5000 (1-shot)       | 0.3333 (1-shot)       |
-| Falcon (40B)                      | 0.5050 (1-shot)       | 0.3443 (1-shot)       |
-| **MPT-Chat (7B)**                 | **0.9795 (5-shot)**   | **0.9795 (5-shot)**   |
-| MPT-Chat (30B)                    | 0.9345 (5-shot)       | 0.9343 (5-shot)       |
-| LLaMA2-Chat (7B)                  | 0.8670 (5-shot)       | 0.8662 (5-shot)       |
-| LLaMA2-Chat (70B)                 | 0.9545 (5-shot)       | 0.9545 (5-shot)       |
-| Mistral-Instruct (7B)             | 0.7745 (5-shot)       | 0.7707 (5-shot)       |
-| Mixtral-8x7B-Instruct (46B)       | 0.7770 (5-shot)       | 0.7658 (5-shot)       |
-| SOLAR-Instruct (10.7B)            | 0.7615 (3-shot)       | 0.7481 (3-shot)       |
+|----------------------------------|------------------------|------------------------|
+| BioGPT-Large (1.5B)              | 0.5700 (1-shot)        | 0.4811 (1-shot)        |
+| BioMedLM (2.7B)                  | 0.7125 (2-shot)        | 0.6866 (2-shot)        |
+| Galactica (6.7B)                 | 0.5320 (1-shot)        | 0.4568 (1-shot)        |
+| Galactica (30B)                  | 0.8585 (5-shot)        | 0.8585 (5-shot)        |
+| Alpaca (7B)                      | 0.6660 (5-shot)        | 0.6241 (5-shot)        |
+| RST (11B)                        | 0.6990 (0-shot)        | 0.6701 (0-shot)        |
+| Falcon (7B)                      | 0.5000 (1-shot)        | 0.3333 (1-shot)        |
+| Falcon (40B)                     | 0.5050 (1-shot)        | 0.3443 (1-shot)        |
+| **MPT-Chat (7B)**                | **0.9795 (5-shot)**    | **0.9795 (5-shot)**    |
+| MPT-Chat (30B)                   | 0.9345 (5-shot)        | 0.9343 (5-shot)        |
+| LLaMA2-Chat (7B)                 | 0.8670 (5-shot)        | 0.8662 (5-shot)        |
+| LLaMA2-Chat (70B)                | 0.9545 (5-shot)        | 0.9545 (5-shot)        |
+| Mistral-Instruct (7B)            | 0.7745 (5-shot)        | 0.7707 (5-shot)        |
+| Mixtral-8x7B-Instruct (46B)      | 0.7770 (5-shot)        | 0.7658 (5-shot)        |
+| SOLAR-Instruct (10.7B)           | 0.7615 (3-shot)        | 0.7481 (3-shot)        |
 
-**Note**: Bold indicates the best score.
+---
 
-
+These results highlight both the opportunities and current limitations of LLMs in extracting biological knowledge, particularly in complex domains like protein interaction networks.
 
 
 
@@ -256,13 +229,6 @@ F1 scores for randomly selected 2,000 (1,000 positive + 1,000 negative) PPI pair
   note = {PMID: 40387594},
   url = {https://doi.org/10.1089/cmb.2025.0078},
   eprint = {https://doi.org/10.1089/cmb.2025.0078}
-}
-@inproceedings{park2023automated,
-  title={Automated Extraction of Molecular Interactions and Pathway Knowledge using Large Language Model, Galactica: Opportunities and Challenges},
-  author={Park, Gilchan and Yoon, Byung-Jun and Luo, Xihaier and L\'{o}pez-Marrero, Vanessa and Johnstone, Patrick and Yoo, Shinjae and Alexander, Francis},
-  booktitle={The 22nd Workshop on Biomedical Natural Language Processing and BioNLP Shared Tasks},
-  pages={255--264},
-  year={2023}
 }
 ```
 
