@@ -11,7 +11,7 @@ psutil
 matplotlib
 scikit-learn
 sentencepiece
-protobuf==3.20.3
+protobuf==4.25.8
 peft
 sacremoses
 wandb
